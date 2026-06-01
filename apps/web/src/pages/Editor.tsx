@@ -184,28 +184,30 @@ export function Editor() {
   }, [scenarioParam, topologyIdParam, loadTopology, resetCanvas, resetSim])
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--text-primary)] flex flex-col overflow-hidden">
       <Navbar />
 
       {/* Main 3-Panel IDE Layout */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 pt-16 h-[calc(100vh-4rem)]">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 pt-16 h-[calc(100vh-4rem)] overflow-hidden">
         {/* LEFT COLUMN (2/12): Palette & Sim Controls */}
-        <div className="lg:col-span-2 bg- border-r border- flex flex-col overflow-y-auto shrink-0 select-none p-3 space-y-4">
-          <div className="space-y-1 pb-2 border-b border-">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Services Palette</h2>
-            <p className="text-[10px] text-slate-500">Drag items to add onto canvas</p>
+        <div className="lg:col-span-2 bg-[var(--bg-panel)] border-r border-[var(--border)] flex flex-col overflow-y-auto shrink-0 select-none p-4 space-y-5">
+          <div className="space-y-1 pb-3 border-b border-[var(--border)]">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Services Palette</h2>
+            <p className="text-[10px] text-[var(--text-secondary)]">Drag items to add onto canvas</p>
           </div>
           <NodePalette />
           
-          <div className="space-y-1 pt-2 border-t border-">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Global Controls</h2>
+          <div className="space-y-1 pt-3 border-t border-[var(--border)]">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)]">Global Controls</h2>
           </div>
           <SimControls />
         </div>
 
         {/* CENTER COLUMN (7/12): Reactive Visual Simulation Canvas */}
-        <div className="lg:col-span-7 h-full relative border-r border- bg-slate-950">
-          <CanvasWrapper />
+        <div className="lg:col-span-7 h-full relative border-r border-[var(--border)] bg-[var(--bg-primary)] overflow-hidden flex flex-col">
+          <div className="flex-1 w-full h-full relative">
+            <CanvasWrapper />
+          </div>
 
           {/* Config sliding panels */}
           <NodeConfigPanel />
@@ -213,10 +215,10 @@ export function Editor() {
         </div>
 
         {/* RIGHT COLUMN (3/12): Sparkline Metrics, Real-Time AI, Timeline */}
-        <div className="lg:col-span-3 bg- flex flex-col overflow-hidden select-none h-full divide-y divide-slate-850">
+        <div className="lg:col-span-3 bg-[var(--bg-panel)] flex flex-col overflow-hidden select-none h-full divide-y divide-[var(--border)]">
           {/* Sparkline Metrics */}
-          <div className="p-4 shrink-0 bg-">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+          <div className="p-4 shrink-0 bg-[var(--bg-panel)]">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Cpu size={14} className="text-indigo-400" />
               System Metrics
             </h2>
@@ -225,22 +227,22 @@ export function Editor() {
 
           {/* AI Narrator Box */}
           <div className="flex-1 min-h-0 flex flex-col p-4">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Info size={14} className="text-purple-400" />
               Real-Time AI Copilot
             </h2>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto pr-1">
               <NarrationPanel />
             </div>
           </div>
 
           {/* Event Log Timeline */}
-          <div className="h-60 shrink-0 p-4 bg- flex flex-col min-h-0">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+          <div className="h-64 shrink-0 p-4 bg-[var(--bg-panel)] flex flex-col min-h-0">
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-3 flex items-center gap-2">
               <Layout size={14} className="text-amber-400" />
               Event Stream
             </h2>
-            <div className="flex-1 overflow-y-auto min-h-0">
+            <div className="flex-1 overflow-y-auto min-h-0 pr-1">
               <EventTimeline />
             </div>
           </div>

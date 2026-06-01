@@ -46,6 +46,15 @@ export function CanvasWrapper() {
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(nodes)
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(edges)
 
+  // Explicitly sync local react-flow state whenever the canvasStore updates (crucial for loading topologies or sandbox sand resets)
+  React.useEffect(() => {
+    setRfNodes(nodes)
+  }, [nodes, setRfNodes])
+
+  React.useEffect(() => {
+    setRfEdges(edges)
+  }, [edges, setRfEdges])
+
   // Sync to store
   const syncNodes = useCallback((updated: Node[]) => {
     setRfNodes(updated)

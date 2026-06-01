@@ -2,30 +2,30 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg-primary: #0A0D12;
-  --bg-secondary: #0f1117;
-  --bg-panel: #13161e;
-  --bg-card: #1a1e2a;
-  --bg-hover: #1e2330;
-  --border: #252a3a;
-  --border-bright: #313747;
-  --text-primary: #e8ecf4;
-  --text-secondary: #8892a4;
-  --text-muted: #525c72;
+  --bg-primary: #050608;
+  --bg-secondary: #0A0D14;
+  --bg-panel: #0E121C;
+  --bg-card: #121724;
+  --bg-hover: #171E2F;
+  --border: #1E2638;
+  --border-bright: #2E3A56;
+  --text-primary: #F0F4F8;
+  --text-secondary: #9EB0C8;
+  --text-muted: #5F7491;
   --accent: #6366f1;
   --accent-bright: #818cf8;
-  --accent-glow: rgba(99, 102, 241, 0.3);
-  --green: #22c55e;
-  --green-dim: rgba(34, 197, 94, 0.15);
-  --yellow: #eab308;
-  --yellow-dim: rgba(234, 179, 8, 0.15);
-  --orange: #f97316;
-  --orange-dim: rgba(249, 115, 22, 0.15);
-  --red: #ef4444;
-  --red-dim: rgba(239, 68, 68, 0.15);
-  --red-glow: rgba(239, 68, 68, 0.3);
-  --blue: #3b82f6;
-  --purple: #a855f7;
+  --accent-glow: rgba(99, 102, 241, 0.25);
+  --green: #10B981;
+  --green-dim: rgba(16, 185, 129, 0.12);
+  --yellow: #F59E0B;
+  --yellow-dim: rgba(245, 158, 11, 0.12);
+  --orange: #EF4444;
+  --orange-dim: rgba(239, 68, 68, 0.12);
+  --red: #F43F5E;
+  --red-dim: rgba(244, 63, 94, 0.12);
+  --red-glow: rgba(244, 63, 94, 0.25);
+  --blue: #3B82F6;
+  --purple: #8B5CF6;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
