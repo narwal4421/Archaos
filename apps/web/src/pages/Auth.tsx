@@ -1,16 +1,22 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
-import { api } from '../lib/api'
 import { Navbar } from '../components/layout/Navbar'
 import { Activity, ShieldAlert, CheckCircle2, User, Mail, Lock } from 'lucide-react'
+
+interface LocationState {
+  mode?: 'register' | 'login'
+}
 
 export function Auth() {
   const navigate = useNavigate()
   const location = useLocation()
   const loginStore = useAuthStore(s => s.login)
 
-  const [isRegister, setIsRegister] = useState(false)
+  const [isRegister, setIsRegister] = useState(() => {
+    const state = location.state as LocationState | null
+    return state?.mode === 'register'
+  })
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -19,13 +25,11 @@ export function Auth() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
 
-  // Listen to mode toggle passed from router states
+  // Keep state updated in case state transition triggers while component is already mounted
   useEffect(() => {
-    const stateMode = (location.state as any)?.mode
-    if (stateMode === 'register') {
-      setIsRegister(true)
-    } else {
-      setIsRegister(false)
+    const state = location.state as LocationState | null
+    if (state?.mode) {
+      setIsRegister(state.mode === 'register')
     }
   }, [location.state])
 
