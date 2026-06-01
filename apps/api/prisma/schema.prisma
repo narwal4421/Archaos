@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  topologies   Topology[]
+  sessions     SimSession[]
+}
+
+model Topology {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  isPublic    Boolean      @default(false)
+  nodesJson   Json         // Array of NodeConfig objects
+  edgesJson   Json         // Array of EdgeConfig objects
+  thumbnail   String?      // Base64 canvas screenshot
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  sessions    SimSession[]
+}
+
+model Scenario {
+  id                String   @id @default(uuid())
+  name              String
+  description       String
+  category          String   // CASCADE, RETRY_STORM, THUNDERING_HERD, SPLIT_BRAIN, etc.
+  difficulty        String   // BEGINNER, INTERMEDIATE, ADVANCED
+  nodesJson         Json
+  edgesJson         Json
+  chaosScript       Json     // Timed chaos events to auto-inject
+  walkthroughScript Json     // Pre-scripted narration with prediction checkpoints
+  isBuiltIn         Boolean  @default(false)
+  playCount         Int      @default(0)
+  createdAt         DateTime @default(now())
+}
+
+model SimSession {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  topologyId   String?
+  topology     Topology? @relation(fields: [topologyId], references: [id])
+  scenarioId   String?
+  durationSecs Int       @default(0)
+  chaosEvents  Json      // Array of chaos events injected during session
+  maxErrorRate Float     @default(0)
+  nodesKilled  Int       @default(0)
+  createdAt    DateTime  @default(now())
+}
