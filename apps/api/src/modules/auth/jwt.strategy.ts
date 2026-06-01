@@ -36,7 +36,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     /* eslint-disable @typescript-eslint/no-unsafe-assignment */
     /* eslint-disable @typescript-eslint/no-unsafe-call */
     /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-    /* eslint-disable @typescript-eslint/no-unsafe-return */
     const prismaClient = this.prisma as any;
 
     const existingUser = await prismaClient.user.findUnique({
@@ -45,9 +44,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (existingUser) {
       return {
-        id: existingUser.id,
-        email: existingUser.email,
-        name: existingUser.name,
+        id: (existingUser as ValidatedUser).id,
+        email: (existingUser as ValidatedUser).email,
+        name: (existingUser as ValidatedUser).name,
       };
     }
 
@@ -65,13 +64,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     return {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
+      id: (newUser as ValidatedUser).id,
+      email: (newUser as ValidatedUser).email,
+      name: (newUser as ValidatedUser).name,
     };
     /* eslint-enable @typescript-eslint/no-unsafe-assignment */
     /* eslint-enable @typescript-eslint/no-unsafe-call */
     /* eslint-enable @typescript-eslint/no-unsafe-member-access */
-    /* eslint-enable @typescript-eslint/no-unsafe-return */
   }
 }

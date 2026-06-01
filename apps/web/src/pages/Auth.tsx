@@ -18,13 +18,6 @@ export function Auth() {
     return state?.mode === 'register'
   })
 
-  // Safely synchronize component mode inside an effect when routing triggers it
-  React.useEffect(() => {
-    if (state?.mode) {
-      setIsRegister(state.mode === 'register')
-    }
-  }, [state?.mode])
-
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
