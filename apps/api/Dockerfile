@@ -33,6 +33,10 @@ COPY --from=builder /app/apps/api/package*.json ./apps/api/
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
 COPY --from=builder /app/package*.json ./
 
+# Copy tsconfig and seed script source required for prisma db seed (which runs ts-node)
+COPY --from=builder /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
+COPY --from=builder /app/apps/api/src/prisma/seed.ts ./apps/api/src/prisma/seed.ts
+
 ENV NODE_ENV=production
 ENV PORT=5000
 
