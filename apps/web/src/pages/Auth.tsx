@@ -13,10 +13,19 @@ export function Auth() {
   const location = useLocation()
   const loginStore = useAuthStore(s => s.login)
 
+  // Derive isRegister dynamically from location.state if it is passed in, using a derived state paradigm.
+  const state = location.state as LocationState | null
   const [isRegister, setIsRegister] = useState(() => {
-    const state = location.state as LocationState | null
     return state?.mode === 'register'
   })
+
+  // Synchronize component mode if location state changes (without triggering cascading render loop)
+  const prevModeRef = React.useRef(state?.mode)
+  if (state?.mode && state.mode !== prevModeRef.current) {
+    prevModeRef.current = state.mode
+    setIsRegister(state.mode === 'register')
+  }
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -24,14 +33,6 @@ export function Auth() {
   const [loading, setLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [successMsg, setSuccessMsg] = useState<string | null>(null)
-
-  // Keep state updated in case state transition triggers while component is already mounted
-  useEffect(() => {
-    const state = location.state as LocationState | null
-    if (state?.mode) {
-      setIsRegister(state.mode === 'register')
-    }
-  }, [location.state])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -91,8 +92,9 @@ export function Auth() {
           setTimeout(() => navigate('/editor'), 1000)
         }
       }
-    } catch (e: any) {
-      setErrorMsg(e.message || 'Authentication failed. Please check credentials.')
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Authentication failed. Please check credentials.'
+      setErrorMsg(msg)
     } finally {
       setLoading(false)
     }
