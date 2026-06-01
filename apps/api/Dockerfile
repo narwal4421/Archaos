@@ -1,6 +1,9 @@
 # ── Stage 1: build ───────────────────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
+# Install openssl for Prisma CLI engine compatibility on Alpine
+RUN apk add --no-cache openssl
+
 WORKDIR /app
 
 # Copy root workspace configurations and package files
@@ -14,12 +17,15 @@ RUN npm ci
 # Copy the rest of the source code
 COPY . .
 
-# Generate Prisma client and compile the API
-RUN node node_modules/prisma/build/index.js generate --schema=apps/api/prisma/schema.prisma
+# Generate Prisma client and compile the API using npx
+RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
 RUN npm run build:api
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM node:20-alpine AS runner
+
+# Install openssl for Prisma engine at runtime on Alpine
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
@@ -36,5 +42,5 @@ ENV PORT=5000
 
 EXPOSE 5000
 
-# Run migrations, seed, and start using local prisma binary
-CMD ["sh", "-c", "node node_modules/prisma/build/index.js migrate deploy --schema=apps/api/prisma/schema.prisma && node node_modules/prisma/build/index.js db seed --schema=apps/api/prisma/schema.prisma && node apps/api/dist/main"]
+# Run migrations, seed, and start using npx
+CMD ["sh", "-c", "npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma && npx prisma db seed --schema=apps/api/prisma/schema.prisma && node apps/api/dist/main"]
