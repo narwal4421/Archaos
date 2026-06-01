@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import { Navbar } from '../components/layout/Navbar'
@@ -13,18 +13,17 @@ export function Auth() {
   const location = useLocation()
   const loginStore = useAuthStore(s => s.login)
 
-  // Derive isRegister dynamically from location.state if it is passed in, using a derived state paradigm.
   const state = location.state as LocationState | null
   const [isRegister, setIsRegister] = useState(() => {
     return state?.mode === 'register'
   })
 
-  // Synchronize component mode if location state changes (without triggering cascading render loop)
-  const prevModeRef = React.useRef(state?.mode)
-  if (state?.mode && state.mode !== prevModeRef.current) {
-    prevModeRef.current = state.mode
-    setIsRegister(state.mode === 'register')
-  }
+  // Safely synchronize component mode inside an effect when routing triggers it
+  React.useEffect(() => {
+    if (state?.mode) {
+      setIsRegister(state.mode === 'register')
+    }
+  }, [state?.mode])
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')

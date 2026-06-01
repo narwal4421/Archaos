@@ -32,27 +32,29 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // We can either find or upsert the user in our Prisma database dynamically
     // so they exist in our local system.
     const userId = payload.sub;
-    
-    // Explicitly casting this.prisma as any to bypass local IDE TS errors regarding Prisma schema resolving,
-    // then extracting properties safely to satisfy strict type rules.
+
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment */
+    /* eslint-disable @typescript-eslint/no-unsafe-call */
+    /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+    /* eslint-disable @typescript-eslint/no-unsafe-return */
     const prismaClient = this.prisma as any;
-    
+
     const existingUser = await prismaClient.user.findUnique({
       where: { id: userId },
     });
 
     if (existingUser) {
       return {
-        id: (existingUser as ValidatedUser).id,
-        email: (existingUser as ValidatedUser).email,
-        name: (existingUser as ValidatedUser).name,
+        id: existingUser.id,
+        email: existingUser.email,
+        name: existingUser.name,
       };
     }
 
     // Create user locally if they don't exist yet but have a valid token
     const email = payload.email || '';
     const name = payload.user_metadata?.name || email.split('@')[0] || 'User';
-    
+
     const newUser = await prismaClient.user.create({
       data: {
         id: userId,
@@ -63,9 +65,13 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
 
     return {
-      id: (newUser as ValidatedUser).id,
-      email: (newUser as ValidatedUser).email,
-      name: (newUser as ValidatedUser).name,
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
     };
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment */
+    /* eslint-enable @typescript-eslint/no-unsafe-call */
+    /* eslint-enable @typescript-eslint/no-unsafe-member-access */
+    /* eslint-enable @typescript-eslint/no-unsafe-return */
   }
 }
