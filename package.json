@@ -18,5 +18,8 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
+  },
+  "prisma": {
+    "schema": "apps/api/prisma/schema.prisma"
   }
 }
