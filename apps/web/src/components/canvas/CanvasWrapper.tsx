@@ -1,8 +1,7 @@
-import React, { useCallback, useRef } from 'react'
+import { useCallback, useRef } from 'react'
 import {
   ReactFlow, Background, Controls, MiniMap,
-  addEdge, useNodesState, useEdgesState,
-  type Connection, type Node, type Edge,
+  addEdge, type Connection, type Node, type Edge,
   BackgroundVariant,
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -39,39 +38,10 @@ export function CanvasWrapper() {
   const reactFlowWrapper = useRef<HTMLDivElement>(null)
   const {
     nodes, edges, setNodes, setEdges,
+    onNodesChange, onEdgesChange,
     setSelectedNodeId, setSelectedEdgeId,
     setNodeConfig, setEdgeConfig,
   } = useCanvasStore()
-
-  const [rfNodes, setRfNodes, onNodesChange] = useNodesState(nodes)
-  const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(edges)
-
-  // Explicitly sync local react-flow state whenever the canvasStore updates (crucial for loading topologies or sandbox sand resets)
-  React.useEffect(() => {
-    setRfNodes(nodes)
-  }, [nodes, setRfNodes])
-
-  React.useEffect(() => {
-    setRfEdges(edges)
-  }, [edges, setRfEdges])
-
-  // Sync to store
-  const syncNodes = useCallback((updated: Node[]) => {
-    setRfNodes(updated)
-    setNodes(updated)
-    updated.forEach(n => {
-      const nodeType = (n.data?.config as NodeConfig)?.type || 'SERVICE'
-      const conf = n.data?.config as NodeConfig || {}
-      setNodeConfig(n.id, {
-        ...conf,
-        id: n.id,
-        type: nodeType as NodeType,
-        label: n.data?.label as string || n.id,
-        x: n.position.x,
-        y: n.position.y,
-      })
-    })
-  }, [setRfNodes, setNodes, setNodeConfig])
 
   const onConnect = useCallback((connection: Connection) => {
     const edgeId = genEdgeId()
@@ -81,16 +51,13 @@ export function CanvasWrapper() {
       type: 'http',
       data: { config: { id: edgeId, type: 'HTTP', sourceId: connection.source!, targetId: connection.target! } }
     }
-    setRfEdges(eds => {
-      const updated = addEdge(newEdge, eds)
-      setEdges(updated)
-      return updated
-    })
+    const updated = addEdge(newEdge, edges)
+    setEdges(updated)
     setEdgeConfig(edgeId, {
       id: edgeId, type: 'HTTP',
       sourceId: connection.source!, targetId: connection.target!,
     })
-  }, [setRfEdges, setEdges, setEdgeConfig])
+  }, [edges, setEdges, setEdgeConfig])
 
   const onDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -120,13 +87,10 @@ export function CanvasWrapper() {
       type: typeToNodeType[nodeType],
       data: { label, config },
     }
-    setRfNodes(nds => {
-      const updated = [...nds, newNode]
-      setNodes(updated)
-      return updated
-    })
+    const updated = [...nodes, newNode]
+    setNodes(updated)
     setNodeConfig(id, config)
-  }, [setRfNodes, setNodes, setNodeConfig])
+  }, [nodes, setNodes, setNodeConfig])
 
   const onNodeClick = useCallback((_: unknown, node: Node) => {
     setSelectedNodeId(node.id)
@@ -144,9 +108,9 @@ export function CanvasWrapper() {
   return (
     <div ref={reactFlowWrapper} style={{ width: '100%', height: '100%' }}>
       <ReactFlow
-        nodes={rfNodes}
-        edges={rfEdges}
-        onNodesChange={changes => { onNodesChange(changes); syncNodes(rfNodes) }}
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onDrop={onDrop}
@@ -160,13 +124,13 @@ export function CanvasWrapper() {
         snapToGrid
         snapGrid={[16, 16]}
         defaultEdgeOptions={{ type: 'http', animated: false }}
-        style={{ background: 'var(--bg-primary)' }}
+        style={{ background: '#050505' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
           size={1}
-          color="var(--border)"
+          color="#222222"
         />
         <Controls />
         <MiniMap

@@ -1,5 +1,8 @@
 import { create } from 'zustand'
-import type { Node, Edge } from '@xyflow/react'
+import {
+  applyNodeChanges, applyEdgeChanges,
+  type Node, type Edge, type NodeChange, type EdgeChange
+} from '@xyflow/react'
 import type { NodeConfig, EdgeConfig } from '../types/topology'
 
 interface CanvasStore {
@@ -13,6 +16,8 @@ interface CanvasStore {
   topologyId: string | null
   setNodes: (nodes: Node[]) => void
   setEdges: (edges: Edge[]) => void
+  onNodesChange: (changes: NodeChange[]) => void
+  onEdgesChange: (changes: EdgeChange[]) => void
   setNodeConfig: (id: string, config: Partial<NodeConfig>) => void
   setEdgeConfig: (id: string, config: Partial<EdgeConfig>) => void
   setSelectedNodeId: (id: string | null) => void
@@ -23,12 +28,9 @@ interface CanvasStore {
   reset: () => void
 }
 
-const DEFAULT_NODES: Node[] = []
-const DEFAULT_EDGES: Edge[] = []
-
 export const useCanvasStore = create<CanvasStore>((set) => ({
-  nodes: DEFAULT_NODES,
-  edges: DEFAULT_EDGES,
+  nodes: [],
+  edges: [],
   nodeConfigs: {},
   edgeConfigs: {},
   selectedNodeId: null,
@@ -39,21 +41,79 @@ export const useCanvasStore = create<CanvasStore>((set) => ({
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
 
-  setNodeConfig: (id, config) =>
+  onNodesChange: (changes) => {
+    set((state) => {
+      const nextNodes = applyNodeChanges(changes, state.nodes)
+      const nextNodeConfigs = { ...state.nodeConfigs }
+      nextNodes.forEach((n) => {
+        if (nextNodeConfigs[n.id]) {
+          const config = n.data?.config as NodeConfig || {}
+          nextNodeConfigs[n.id] = {
+            ...nextNodeConfigs[n.id],
+            ...config,
+            x: n.position.x,
+            y: n.position.y,
+          }
+        }
+      })
+      return { nodes: nextNodes, nodeConfigs: nextNodeConfigs }
+    })
+  },
+
+  onEdgesChange: (changes) => {
     set((state) => ({
-      nodeConfigs: {
-        ...state.nodeConfigs,
-        [id]: { ...state.nodeConfigs[id], ...config },
-      },
-    })),
+      edges: applyEdgeChanges(changes, state.edges),
+    }))
+  },
+
+  setNodeConfig: (id, config) =>
+    set((state) => {
+      const updatedConfig = { ...state.nodeConfigs[id], ...config }
+      const updatedNodes = state.nodes.map((n) => {
+        if (n.id === id) {
+          return {
+            ...n,
+            data: {
+              ...n.data,
+              label: updatedConfig.label || n.data?.label,
+              config: updatedConfig,
+            },
+          }
+        }
+        return n
+      })
+      return {
+        nodeConfigs: {
+          ...state.nodeConfigs,
+          [id]: updatedConfig,
+        },
+        nodes: updatedNodes,
+      }
+    }),
 
   setEdgeConfig: (id, config) =>
-    set((state) => ({
-      edgeConfigs: {
-        ...state.edgeConfigs,
-        [id]: { ...state.edgeConfigs[id], ...config },
-      },
-    })),
+    set((state) => {
+      const updatedConfig = { ...state.edgeConfigs[id], ...config }
+      const updatedEdges = state.edges.map((e) => {
+        if (e.id === id) {
+          return {
+            ...e,
+            data: {
+              ...e.data,
+              config: updatedConfig,
+            },
+          }
+        }
+        return e
+      })
+      return {
+        edgeConfigs: {
+          ...state.edgeConfigs,
+          [id]: updatedConfig,
+        },
+        edges: updatedEdges,
+      }
+    }),
 
   setSelectedNodeId: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
   setSelectedEdgeId: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
