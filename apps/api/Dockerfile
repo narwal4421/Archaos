@@ -44,5 +44,5 @@ ENV PORT=5000
 
 EXPOSE 5000
 
-# Migrate, seed, and start directly now that they are in the PATH
-CMD ["sh", "-c", "cd apps/api && prisma migrate deploy && prisma db seed && node dist/main"]
+# Migrate, seed, and start directly with explicit schema locations to avoid configuration ambiguities
+CMD ["sh", "-c", "cd apps/api && prisma migrate deploy --schema=prisma/schema.prisma && prisma db seed --schema=prisma/schema.prisma && node dist/main"]
