@@ -20,6 +20,7 @@
     "concurrently": "^8.2.2"
   },
   "prisma": {
-    "schema": "apps/api/prisma/schema.prisma"
+    "schema": "apps/api/prisma/schema.prisma",
+    "seed": "ts-node apps/api/src/prisma/seed.ts"
   }
 }
