@@ -17,8 +17,8 @@ RUN npm ci
 # Copy the rest of the source code
 COPY . .
 
-# Generate Prisma client and compile the API using npx
-RUN npx prisma generate --schema=apps/api/prisma/schema.prisma
+# Generate Prisma client and compile the API using workspace context
+RUN npx -w api prisma generate --schema=apps/api/prisma/schema.prisma
 RUN npm run build:api
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
@@ -42,5 +42,5 @@ ENV PORT=5000
 
 EXPOSE 5000
 
-# Run migrations, seed, and start using npx
-CMD ["sh", "-c", "npx prisma migrate deploy --schema=apps/api/prisma/schema.prisma && npx prisma db seed --schema=apps/api/prisma/schema.prisma && node apps/api/dist/main"]
+# Run migrations, seed, and start using workspace context
+CMD ["sh", "-c", "npx -w api prisma migrate deploy --schema=apps/api/prisma/schema.prisma && npx -w api prisma db seed --schema=apps/api/prisma/schema.prisma && node apps/api/dist/main"]
