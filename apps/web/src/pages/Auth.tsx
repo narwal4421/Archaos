@@ -42,34 +42,48 @@ export function Auth() {
     }
 
     try {
+      const { supabase } = await import('../lib/supabase')
       if (isRegister) {
-        // Register API Call
-        try {
-          const res = await api.auth.register({ email, passwordHash: password, name })
-          loginStore(res.user, res.token)
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              name,
+            },
+          },
+        })
+        if (error) throw error
+        if (data.session) {
+          loginStore(
+            {
+              id: data.user?.id || '',
+              email: data.user?.email || email,
+              name: data.user?.user_metadata?.name || name,
+            },
+            data.session.access_token
+          )
           setSuccessMsg('Account registered successfully!')
           setTimeout(() => navigate('/editor'), 1000)
-        } catch (err: any) {
-          // Backend offline or error -> Fallback to mock register
-          console.warn('Backend offline, running fallback register', err)
-          const mockUser = { id: Math.random().toString(), email, name }
-          loginStore(mockUser, 'mock-jwt-token-string')
-          setSuccessMsg('Demo registration successful!')
-          setTimeout(() => navigate('/editor'), 1000)
+        } else {
+          setSuccessMsg('Registration successful! Please check your email for verification.')
         }
       } else {
-        // Login API Call
-        try {
-          const res = await api.auth.login({ email, passwordHash: password })
-          loginStore(res.user, res.token)
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        })
+        if (error) throw error
+        if (data.session) {
+          loginStore(
+            {
+              id: data.user?.id || '',
+              email: data.user?.email || email,
+              name: data.user?.user_metadata?.name || email.split('@')[0],
+            },
+            data.session.access_token
+          )
           setSuccessMsg('Logged in successfully!')
-          setTimeout(() => navigate('/editor'), 1000)
-        } catch (err: any) {
-          // Backend offline or error -> Fallback to mock login
-          console.warn('Backend offline, running fallback login', err)
-          const mockUser = { id: 'mock-user-id', email, name: email.split('@')[0] || 'Developer' }
-          loginStore(mockUser, 'mock-jwt-token-string')
-          setSuccessMsg('Demo Login successful!')
           setTimeout(() => navigate('/editor'), 1000)
         }
       }

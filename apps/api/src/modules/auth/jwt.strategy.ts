@@ -14,12 +14,28 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: any) {
-    const user = await this.prisma.user.findUnique({
+    // With Supabase auth, sub is the user's UUID.
+    // We can either find or upsert the user in our Prisma database dynamically
+    // so they exist in our local system.
+    let user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
     });
+
     if (!user) {
-      throw new UnauthorizedException();
+      // Create user locally if they don't exist yet but have a valid token
+      const email = payload.email || '';
+      const name = payload.user_metadata?.name || email.split('@')[0] || 'User';
+      
+      user = await this.prisma.user.create({
+        data: {
+          id: payload.sub,
+          email,
+          name,
+          passwordHash: '', // No password hash needed locally with Supabase
+        },
+      });
     }
+
     return { id: user.id, email: user.email, name: user.name };
   }
 }
