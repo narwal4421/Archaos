@@ -37,10 +37,12 @@ COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/apps/api/tsconfig.json ./apps/api/tsconfig.json
 COPY --from=builder /app/apps/api/src/prisma/seed.ts ./apps/api/src/prisma/seed.ts
 
+# Put the monorepo node_modules bin folders onto the PATH so binaries like prisma and ts-node are globally resolved by shell
+ENV PATH="/app/node_modules/.bin:/app/apps/api/node_modules/.bin:${PATH}"
 ENV NODE_ENV=production
 ENV PORT=5000
 
 EXPOSE 5000
 
-# Migrate, seed, and start using npx to resolve prisma within workspaces
-CMD ["sh", "-c", "cd apps/api && npx prisma migrate deploy && npx prisma db seed && node dist/main"]
+# Migrate, seed, and start directly now that they are in the PATH
+CMD ["sh", "-c", "cd apps/api && prisma migrate deploy && prisma db seed && node dist/main"]
