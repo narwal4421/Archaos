@@ -1,18 +1,26 @@
 import { useSimulationStore } from '../../stores/simulationStore'
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react'
 import type { SimEvent } from '../../types/simulation'
 import { useCanvasStore } from '../../stores/canvasStore'
 
-const SeverityIcon = ({ severity }: { severity: SimEvent['severity'] }) => {
-  if (severity === 'CRITICAL') return <AlertCircle size={11} style={{ color: '#ef4444', flexShrink: 0 }} />
-  if (severity === 'WARNING')  return <AlertTriangle size={11} style={{ color: '#eab308', flexShrink: 0 }} />
-  return <Info size={11} style={{ color: '#3b82f6', flexShrink: 0 }} />
+const SeverityDot = ({ severity }: { severity: SimEvent['severity'] }) => {
+  const colors: Record<SimEvent['severity'], string> = {
+    CRITICAL: '#EF4444',
+    WARNING: '#F59E0B',
+    INFO: '#3B82F6',
+  }
+  const color = colors[severity]
+  return (
+    <span
+      className="inline-block w-2 h-2 rounded-full flex-shrink-0 mt-0.5"
+      style={{ background: color, boxShadow: `0 0 4px ${color}60` }}
+    />
+  )
 }
 
-const severityColor: Record<SimEvent['severity'], string> = {
-  CRITICAL: '#ef4444',
-  WARNING:  '#eab308',
-  INFO:     '#3b82f6',
+const severityTextColor: Record<SimEvent['severity'], string> = {
+  CRITICAL: '#EF4444',
+  WARNING:  '#F59E0B',
+  INFO:     '#3B82F6',
 }
 
 export function EventTimeline() {
@@ -26,41 +34,46 @@ export function EventTimeline() {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="panel-header">
-        <span className="panel-title">Event Log</span>
+    <div className="h-full flex flex-col font-['Inter']">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-3 border-b border-[#1A1A1A]">
+        <span className="text-[11px] font-bold uppercase tracking-[1.5px] text-[#444444]">
+          Event Timeline
+        </span>
         {events.length > 0 && (
-          <span className="badge badge-gray" style={{ fontSize: 9 }}>{events.length}</span>
+          <span className="text-[9px] font-bold text-[#888888] bg-[#111111] border border-[#222222] px-2 py-0.5 rounded font-mono">
+            {events.length}
+          </span>
         )}
       </div>
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+
+      {/* Events List */}
+      <div className="flex-1 overflow-y-auto mt-2">
         {events.length === 0 ? (
-          <div className="flex items-center justify-center py-6 text-xs"
-            style={{ color: 'var(--text-muted)' }}>
+          <div className="flex items-center justify-center py-8 text-[11px] text-[#444444] font-mono text-center">
             Events appear here during simulation
           </div>
         ) : (
-          <div style={{ padding: '4px 0' }}>
+          <div>
             {events.map(event => (
-              <div
+              <button
                 key={event.id}
                 onClick={() => event.nodeId && setSelectedNodeId(event.nodeId)}
-                className="flex items-start gap-2 px-3 py-2 cursor-pointer transition-colors duration-100"
-                style={{ borderBottom: '1px solid var(--border)' }}
-                onMouseEnter={e => (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-hover)'}
-                onMouseLeave={e => (e.currentTarget as HTMLDivElement).style.background = ''}
+                className="w-full text-left flex items-start gap-2.5 px-2 py-2 rounded-lg cursor-pointer transition-colors duration-100 hover:bg-[#111111] group"
               >
-                <SeverityIcon severity={event.severity} />
+                <SeverityDot severity={event.severity} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[10px] leading-snug" style={{ color: severityColor[event.severity] }}>
+                  <div
+                    className="text-[11px] leading-snug font-['JetBrains_Mono',monospace] group-hover:text-white transition-colors"
+                    style={{ color: severityTextColor[event.severity] }}
+                  >
                     {event.message}
                   </div>
                 </div>
-                <span className="mono text-[9px] flex-shrink-0"
-                  style={{ color: 'var(--text-muted)' }}>
+                <span className="font-['JetBrains_Mono',monospace] text-[9px] text-[#444444] flex-shrink-0 pt-0.5">
                   {formatTime(event.timeSec)}
                 </span>
-              </div>
+              </button>
             ))}
           </div>
         )}

@@ -28,7 +28,7 @@ export function useSimulation() {
       worker.terminate()
       setWorker(null)
     }
-  }, [])
+  }, [appendEvent, applyTick, setWorker])
 
   const getTopology = () => {
     const nodes: NodeConfig[] = Object.values(nodeConfigs)

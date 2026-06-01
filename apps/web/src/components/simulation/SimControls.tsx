@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
-  Play, Pause, RotateCcw, Skull, Scissors, Timer, TrendingUp
+  Play, Pause, RotateCcw,
 } from 'lucide-react'
 import { useSimulationStore } from '../../stores/simulationStore'
 import { useCanvasStore } from '../../stores/canvasStore'
@@ -11,14 +11,15 @@ import type { TrafficProfile } from '../../types/simulation'
 const SPEEDS = [1, 2, 5, 10]
 const PATTERNS = ['CONSTANT', 'SINUSOIDAL', 'SPIKE', 'RAMP'] as const
 
+const sectionHeader = "text-[11px] font-bold uppercase tracking-[1.5px] text-[#444444] mb-3 font-['Inter']"
+
 export function SimControls() {
   const { start, pause, resume, reset, setSpeed, injectChaos } = useSimulation()
   const simState = useSimulationStore(s => s.simState)
-
   const setTrafficProfile = useSimulationStore(s => s.setTrafficProfile)
   const nodes = useCanvasStore(s => s.nodes)
 
-  const [rps, setRps] = useState(100)
+  const [rps, setRps] = useState(500)
   const [pattern, setPattern] = useState<TrafficProfile['pattern']>('CONSTANT')
   const [speed, setSpeedState] = useState(1)
 
@@ -51,139 +52,166 @@ export function SimControls() {
   }
 
   return (
-    <div>
-      <div className="panel-header">
-        <span className="panel-title">Simulation</span>
-        {!isIdle && (
-          <span className="mono text-[10px]" style={{ color: 'var(--text-muted)' }}>
-            T+{simState.currentTimeSec}s
-          </span>
-        )}
+    <div className="flex flex-col gap-5 font-['Inter']">
+
+      {/* ─── TRAFFIC PROFILE ─── */}
+      <div>
+        <div className={sectionHeader}>Traffic Profile</div>
+
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs text-[#888888]">Base Traffic</span>
+          <span className="font-mono text-xs font-bold text-[#7C3AED]">{rps} RPS</span>
+        </div>
+        <input
+          type="range" min={10} max={5000} step={10} value={rps}
+          onChange={e => setRps(Number(e.target.value))}
+          disabled={isRunning}
+          className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-[#222222] disabled:opacity-40"
+          style={{ accentColor: '#7C3AED' }}
+        />
+
+        <div className="mt-3 mb-1.5">
+          <span className="text-xs text-[#888888]">Pattern</span>
+        </div>
+        <div className="grid grid-cols-2 gap-1">
+          {PATTERNS.map(p => (
+            <button
+              key={p}
+              onClick={() => setPattern(p)}
+              disabled={isRunning}
+              className="py-1.5 rounded-md text-[10px] font-semibold border transition-all duration-150 cursor-pointer disabled:opacity-40"
+              style={{
+                background: pattern === p ? 'rgba(124,58,237,0.2)' : '#111111',
+                color: pattern === p ? '#A78BFA' : '#888888',
+                border: `1px solid ${pattern === p ? '#7C3AED' : '#222222'}`,
+              }}
+            >
+              {p.replace('_', ' ')}
+            </button>
+          ))}
+        </div>
       </div>
-      <div style={{ padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-        {/* Traffic RPS */}
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label className="text-xs" style={{ color: 'var(--text-secondary)' }}>Base Traffic</label>
-            <span className="mono text-xs font-bold" style={{ color: 'var(--accent-bright)' }}>{rps} RPS</span>
-          </div>
-          <input
-            type="range" min={10} max={5000} step={10} value={rps}
-            onChange={e => setRps(Number(e.target.value))}
-            disabled={isRunning}
-            className="w-full"
-            style={{ accentColor: 'var(--accent)' }}
-          />
+      {/* ─── SIMULATION ─── */}
+      <div>
+        <div className={sectionHeader}>Simulation</div>
+
+        {/* Speed Toggles */}
+        <div className="flex gap-1 mb-3">
+          {SPEEDS.map(s => (
+            <button
+              key={s}
+              onClick={() => handleSpeed(s)}
+              disabled={isIdle}
+              className="flex-1 py-1.5 rounded-md text-[11px] font-bold border transition-all duration-150 cursor-pointer disabled:opacity-40"
+              style={{
+                background: speed === s ? '#7C3AED' : '#111111',
+                color: speed === s ? '#ffffff' : '#888888',
+                border: `1px solid ${speed === s ? '#7C3AED' : '#222222'}`,
+              }}
+            >
+              {s}×
+            </button>
+          ))}
         </div>
 
-        {/* Pattern */}
-        <div>
-          <label className="text-xs mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Pattern</label>
-          <div className="grid grid-cols-2 gap-1">
-            {PATTERNS.map(p => (
+        {/* Start / Pause / Resume / Reset */}
+        {isIdle && (
+          <button
+            onClick={handleStart}
+            disabled={nodes.length === 0}
+            className="w-full py-2.5 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer disabled:opacity-40"
+            style={{ background: 'linear-gradient(135deg, #7C3AED, #4F46E5)', boxShadow: '0 4px 12px rgba(124,58,237,0.3)' }}
+          >
+            <Play size={14} className="fill-white" /> Start Simulation
+          </button>
+        )}
+
+        {(isRunning || isPaused) && (
+          <div className="flex gap-2">
+            {isRunning ? (
               <button
-                key={p}
-                onClick={() => setPattern(p)}
-                disabled={isRunning}
-                className="btn btn-sm"
-                style={{
-                  background: pattern === p ? 'var(--accent)' : 'var(--bg-card)',
-                  color: pattern === p ? 'white' : 'var(--text-secondary)',
-                  border: `1px solid ${pattern === p ? 'var(--accent)' : 'var(--border)'}`,
-                  fontSize: 10,
-                }}
+                onClick={pause}
+                className="flex-1 py-2.5 rounded-lg text-sm font-bold text-[#888888] border border-[#333333] hover:border-[#888888] hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+                style={{ background: 'transparent' }}
               >
-                {p.replace('_', ' ')}
+                <Pause size={14} /> Pause
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Speed */}
-        <div>
-          <label className="text-xs mb-1.5 block" style={{ color: 'var(--text-secondary)' }}>Speed</label>
-          <div className="flex gap-1">
-            {SPEEDS.map(s => (
+            ) : (
               <button
-                key={s}
-                onClick={() => handleSpeed(s)}
-                disabled={isIdle}
-                className="btn btn-sm flex-1"
-                style={{
-                  background: speed === s ? 'var(--accent)22' : 'var(--bg-card)',
-                  color: speed === s ? 'var(--accent-bright)' : 'var(--text-muted)',
-                  border: `1px solid ${speed === s ? 'var(--accent)' : 'var(--border)'}`,
-                  fontSize: 11,
-                }}
+                onClick={resume}
+                className="flex-1 py-2.5 rounded-lg text-sm font-bold text-white flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                style={{ background: 'linear-gradient(135deg, #7C3AED, #4F46E5)' }}
               >
-                {s}×
+                <Play size={14} className="fill-white" /> Resume
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Play / Pause / Reset */}
-        <div className="flex gap-2">
-          {isIdle && (
-            <button onClick={handleStart} className="btn btn-primary flex-1"
-              disabled={nodes.length === 0}>
-              <Play size={14} /> Simulate
-            </button>
-          )}
-          {isRunning && (
-            <button onClick={pause} className="btn btn-ghost flex-1">
-              <Pause size={14} /> Pause
-            </button>
-          )}
-          {isPaused && (
-            <button onClick={resume} className="btn btn-success flex-1">
-              <Play size={14} /> Resume
-            </button>
-          )}
-          {!isIdle && (
-            <button onClick={reset} className="btn btn-ghost btn-icon" title="Reset">
+            )}
+            <button
+              onClick={reset}
+              className="py-2.5 px-3 rounded-lg text-sm font-bold text-[#888888] border border-[#333333] hover:border-[#888888] hover:text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+              title="Reset"
+            >
               <RotateCcw size={14} />
             </button>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Chaos Quick-Inject */}
-        <AnimatePresence>
-          {isRunning && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <div className="mt-1 pt-3" style={{ borderTop: '1px solid var(--border)' }}>
-                <div className="panel-title mb-2">Quick Chaos</div>
-                <div className="grid grid-cols-1 gap-1.5">
-                  <button onClick={() => { const id = randomNodeId(); if (id) injectChaos({ type: 'KILL_NODE', targetId: id }) }}
-                    className="btn btn-danger btn-sm w-full">
-                    <Skull size={12} /> Kill Random Service
-                  </button>
-                  <button onClick={() => injectChaos({ type: 'TRAFFIC_SPIKE', targetId: nodes[0]?.id || '', value: 10 })}
-                    className="btn btn-sm w-full"
-                    style={{ background: 'rgba(249,115,22,0.1)', color: '#f97316', border: '1px solid #f97316' }}>
-                    <TrendingUp size={12} /> Spike Traffic 10×
-                  </button>
-                  <button onClick={() => { const id = randomEdgeId(); if (id) injectChaos({ type: 'NETWORK_PARTITION', targetId: id }) }}
-                    className="btn btn-sm w-full"
-                    style={{ background: 'rgba(234,179,8,0.1)', color: '#eab308', border: '1px solid #eab308' }}>
-                    <Scissors size={12} /> Partition Network
-                  </button>
-                  <button onClick={() => { const id = randomEdgeId(); if (id) injectChaos({ type: 'ADD_LATENCY', targetId: id, value: 1000 }) }}
-                    className="btn btn-sm w-full"
-                    style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6', border: '1px solid #3b82f6' }}>
-                    <Timer size={12} /> Add 1s Latency
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* Timer display */}
+        {!isIdle && (
+          <div className="mt-2 text-center font-mono text-[10px] text-[#444444]">
+            T+{Math.floor(simState.currentTimeSec)}s elapsed
+          </div>
+        )}
       </div>
+
+      {/* ─── CHAOS INJECTION (only when running) ─── */}
+      <AnimatePresence>
+        {isRunning && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className={sectionHeader}>Chaos Injection</div>
+            <div className="flex flex-col gap-1.5">
+              {[
+                {
+                  label: '💀 Kill Random Node',
+                  action: () => { const id = randomNodeId(); if (id) injectChaos({ type: 'KILL_NODE', targetId: id }) },
+                },
+                {
+                  label: '⚡ Spike Traffic 10×',
+                  action: () => injectChaos({ type: 'TRAFFIC_SPIKE', targetId: nodes[0]?.id || '', value: 10 }),
+                },
+                {
+                  label: '✂ Partition Network',
+                  action: () => { const id = randomEdgeId(); if (id) injectChaos({ type: 'NETWORK_PARTITION', targetId: id }) },
+                },
+                {
+                  label: '🐢 Slow All Edges',
+                  action: () => { const id = randomEdgeId(); if (id) injectChaos({ type: 'ADD_LATENCY', targetId: id, value: 1000 }) },
+                },
+              ].map(({ label, action }) => (
+                <button
+                  key={label}
+                  onClick={action}
+                  className="w-full py-2.5 px-3 text-left text-xs font-semibold rounded-lg transition-all cursor-pointer"
+                  style={{
+                    background: 'transparent',
+                    color: '#EF4444',
+                    border: '1px solid #EF4444',
+                  }}
+                  onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.background = 'rgba(239,68,68,0.1)')}
+                  onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.background = 'transparent')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

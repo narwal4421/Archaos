@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../stores/authStore'
-import { Activity, LogOut, LayoutGrid, Award, Settings, User } from 'lucide-react'
+import { LogOut, User } from 'lucide-react'
 
 export function Navbar() {
   const { user, logout, isAuthenticated } = useAuthStore()
@@ -15,63 +15,62 @@ export function Navbar() {
   const isActive = (path: string) => location.pathname === path
 
   return (
-    <nav className="fixed top-0 left-0 right-0 h-16 bg- border-b border- z-40 px-6 flex items-center justify-between text-slate-100">
-      {/* Brand Logo */}
-      <Link to="/" className="flex items-center gap-2.5 font-bold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500 hover:opacity-90 transition-opacity">
-        <Activity className="text-indigo-500 animate-pulse" size={22} />
+    <nav className="fixed top-0 left-0 right-0 h-[60px] bg-black/80 backdrop-blur-[12px] border-b border-[#1A1A1A] z-[1000] px-6 flex items-center justify-between text-white">
+      {/* Left: Brand Logo */}
+      <Link
+        to="/"
+        className="font-['Space_Grotesk'] text-[18px] font-bold tracking-[3px] text-white hover:opacity-90 transition-opacity"
+      >
         ARCHAOS
       </Link>
 
-      {/* Navigation Links */}
-      <div className="hidden md:flex items-center gap-6 text-sm font-medium">
+      {/* Center: Navigation Links */}
+      <div className="flex items-center gap-8 text-[14px] font-['Inter'] font-medium">
         <Link
           to="/editor"
-          className={`transition-colors flex items-center gap-1.5 ${
-            isActive('/editor') ? 'text-indigo-400 font-semibold' : 'text-slate-350 hover:text-slate-150'
+          className={`transition-colors duration-150 ${
+            isActive('/editor') ? 'text-white font-semibold' : 'text-[#888888] hover:text-white'
           }`}
         >
-          <Settings size={15} />
           Playground
         </Link>
         <Link
           to="/scenarios"
-          className={`transition-colors flex items-center gap-1.5 ${
-            isActive('/scenarios') ? 'text-indigo-400 font-semibold' : 'text-slate-350 hover:text-slate-150'
+          className={`transition-colors duration-150 ${
+            isActive('/scenarios') ? 'text-white font-semibold' : 'text-[#888888] hover:text-white'
           }`}
         >
-          <LayoutGrid size={15} />
           Scenarios
         </Link>
         {isAuthenticated() && (
           <Link
             to="/dashboard"
-            className={`transition-colors flex items-center gap-1.5 ${
-              isActive('/dashboard') ? 'text-indigo-400 font-semibold' : 'text-slate-350 hover:text-slate-150'
+            className={`transition-colors duration-150 ${
+              isActive('/dashboard') ? 'text-white font-semibold' : 'text-[#888888] hover:text-white'
             }`}
           >
-            <Award size={15} />
             Dashboard
           </Link>
         )}
       </div>
 
-      {/* Auth Profile Section */}
-      <div className="flex items-center gap-4">
+      {/* Right: User / Auth Profile Section */}
+      <div className="flex items-center gap-4 text-[14px] font-['Inter']">
         {isAuthenticated() ? (
-          <div className="flex items-center gap-3.5 bg- px-3 py-1.5 border border- rounded-xl">
+          <div className="flex items-center gap-3.5 bg-[#0A0A0A] px-3.5 py-1.5 border border-[#222222] rounded-lg">
             <div className="flex flex-col text-right hidden sm:flex">
-              <span className="text-xs font-semibold text-slate-200">{user?.name}</span>
-              <span className="text-[9px] text-slate-500 font-mono">{user?.email}</span>
+              <span className="text-xs font-semibold text-white">{user?.name}</span>
+              <span className="text-[9px] text-[#888888] font-mono">{user?.email}</span>
             </div>
-            <div className="w-8 h-8 rounded-lg bg-indigo-950 border border- text-indigo-400 flex items-center justify-center font-bold text-sm shadow-inner uppercase">
-              {user?.name ? user.name.slice(0, 2) : <User size={14} />}
+            <div className="w-7 h-7 rounded-md bg-[#111111] border border-[#222222] text-[#7C3AED] flex items-center justify-center font-bold text-xs uppercase shadow-inner">
+              {user?.name ? user.name.slice(0, 2) : <User size={13} />}
             </div>
             <button
               onClick={handleLogout}
-              className="p-1.5 bg- hover:bg- border border- hover:border- rounded-lg text-slate-400 hover:text-red-400 transition-all cursor-pointer"
+              className="p-1 hover:bg-[#111111] border border-transparent hover:border-[#222222] rounded text-[#888888] hover:text-[#EF4444] transition-all cursor-pointer"
               title="Logout"
             >
-              <LogOut size={15} />
+              <LogOut size={14} />
             </button>
           </div>
         ) : (
@@ -79,14 +78,14 @@ export function Navbar() {
             <Link
               to="/auth"
               state={{ mode: 'login' }}
-              className="px-4 py-1.5 text-xs text-slate-350 hover:text-slate-100 transition-colors font-medium"
+              className="px-4 py-2 text-xs text-[#888888] hover:text-white transition-colors font-medium"
             >
               Log In
             </Link>
             <Link
               to="/auth"
               state={{ mode: 'register' }}
-              className="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 text-slate-100 font-semibold rounded-xl border border- shadow-indigo-950 shadow-md transition-all active:scale-[0.98]"
+              className="px-5 py-2 text-xs bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-semibold rounded-lg shadow-lg hover:opacity-85 active:scale-[0.98] transition-all cursor-pointer"
             >
               Sign Up
             </Link>

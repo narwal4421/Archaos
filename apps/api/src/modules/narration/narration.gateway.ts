@@ -54,10 +54,14 @@ export class NarrationGateway
   @WebSocketServer()
   server: Server;
 
-  private openai = new OpenAI({
-    apiKey: process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY ?? '',
-    baseURL: 'https://openrouter.ai/api/v1',
-  });
+  private getOpenAIClient(): OpenAI | null {
+    const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY;
+    if (!apiKey) return null;
+    return new OpenAI({
+      apiKey,
+      baseURL: 'https://openrouter.ai/api/v1',
+    });
+  }
 
   private lastNarrationTime = new Map<string, number>();
   private readonly narrationCooldownMs = 5000;
@@ -109,11 +113,8 @@ export class NarrationGateway
     state: unknown,
     topology: unknown,
   ): Promise<void> {
-    const hasApiKey =
-      Boolean(process.env.OPENROUTER_API_KEY) ||
-      Boolean(process.env.OPENAI_API_KEY);
-
-    if (!hasApiKey) {
+    const openaiClient = this.getOpenAIClient();
+    if (!openaiClient) {
       const demo = this.generateDemoNarration(event);
       client.emit('narration:token', { token: JSON.stringify(demo) });
       client.emit('narration:done', {
@@ -160,7 +161,7 @@ Never be generic. Every word should describe THIS specific topology's current st
     const attemptStream = async (
       model: string,
     ): Promise<Stream<ChatCompletionChunk>> => {
-      return this.openai.chat.completions.create(
+      return openaiClient.chat.completions.create(
         {
           model,
           stream: true,

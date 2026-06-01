@@ -1,221 +1,327 @@
+import { useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Activity, ShieldCheck, Zap, Cpu, ArrowRight, Play, Eye } from 'lucide-react'
-
-const SCENARIOS = [
-  {
-    id: "the-cascade",
-    name: "The Cascade",
-    desc: "A database slowdown cascades upstream through 6 services in 90 seconds.",
-    category: "Resilience",
-    difficulty: "Beginner",
-    color: "from-blue-500 to-indigo-500",
-  },
-  {
-    id: "the-retry-storm",
-    name: "The Retry Storm",
-    desc: "Aggressive retries amplify load 4x on a struggling downstream service.",
-    category: "Traffic",
-    difficulty: "Intermediate",
-    color: "from-amber-500 to-orange-500",
-  },
-  {
-    id: "the-thundering-herd",
-    name: "The Thundering Herd",
-    desc: "A cache expires under heavy traffic, flooding the main PostgreSQL database.",
-    category: "Caching",
-    difficulty: "Intermediate",
-    color: "from-cyan-500 to-teal-500",
-  },
-  {
-    id: "split-brain",
-    name: "Split Brain",
-    desc: "A replication link is partitioned, creating two write-conflicting leaders.",
-    category: "Database",
-    difficulty: "Advanced",
-    color: "from-pink-500 to-rose-500",
-  },
-  {
-    id: "graceful-degradation",
-    name: "Graceful Degradation",
-    desc: "EXACT same slowdown as The Cascade, but circuit breakers enable system survival.",
-    category: "Resilience",
-    difficulty: "Beginner",
-    color: "from-emerald-500 to-teal-500",
-  },
-  {
-    id: "the-queue-flood",
-    name: "The Queue Flood",
-    desc: "Consumer dies, Kafka queue fills, backpressure triggers, consumer recovers and drains.",
-    category: "Queueing",
-    difficulty: "Intermediate",
-    color: "from-purple-500 to-violet-500",
-  },
-  {
-    id: "the-memory-leak",
-    name: "The Memory Leak",
-    desc: "Service memory rises slowly until OOM crash and restart, creating outage cycles.",
-    category: "Infrastructure",
-    difficulty: "Intermediate",
-    color: "from-indigo-500 to-purple-500",
-  },
-  {
-    id: "traffic-spike-survival",
-    name: "Traffic Spike",
-    desc: "10x traffic spike with no other chaos. Your service configs determine what fails first.",
-    category: "Scaling",
-    difficulty: "Advanced",
-    color: "from-fuchsia-500 to-pink-500",
-  }
-]
+import { Play, Skull, Brain, ShieldAlert } from 'lucide-react'
 
 export function Landing() {
   const navigate = useNavigate()
+  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+
+  // Animated Background Loop
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    let animationFrameId: number
+    let width = (canvas.width = window.innerWidth)
+    let height = (canvas.height = window.innerHeight)
+
+    const handleResize = () => {
+      width = canvas.width = window.innerWidth
+      height = canvas.height = window.innerHeight
+    }
+    window.addEventListener('resize', handleResize)
+
+    // Setup network nodes for visualization
+    const nodes = [
+      { id: 'gateway', label: 'API Gateway', px: 0.25, py: 0.5, size: 10, color: '#06B6D4', pulse: 0, state: 'HEALTHY' },
+      { id: 'order', label: 'Order Svc', px: 0.5, py: 0.35, size: 8, color: '#10B981', pulse: 0, state: 'HEALTHY' },
+      { id: 'payment', label: 'Payment Svc', px: 0.5, py: 0.65, size: 8, color: '#10B981', pulse: 0, state: 'HEALTHY' },
+      { id: 'db', label: 'Postgres DB', px: 0.75, py: 0.5, size: 12, color: '#3B82F6', pulse: 0, state: 'HEALTHY' },
+    ]
+
+    const edges = [
+      { source: 0, target: 1, progress: [0, 0.3, 0.65] },
+      { source: 0, target: 2, progress: [0.15, 0.5, 0.8] },
+      { source: 1, target: 3, progress: [0.1, 0.45, 0.75] },
+      { source: 2, target: 3, progress: [0.2, 0.6, 0.9] },
+    ]
+
+    let time = 0
+
+    const render = () => {
+      ctx.fillStyle = '#000000'
+      ctx.fillRect(0, 0, width, height)
+
+      // Add a subtle grid
+      ctx.strokeStyle = '#080808'
+      ctx.lineWidth = 1
+      const gridSize = 40
+      for (let x = 0; x < width; x += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(x, 0)
+        ctx.lineTo(x, height)
+        ctx.stroke()
+      }
+      for (let y = 0; y < height; y += gridSize) {
+        ctx.beginPath()
+        ctx.moveTo(0, y)
+        ctx.lineTo(width, y)
+        ctx.stroke()
+      }
+
+      time += 0.015
+
+      // Transition the Order service to degraded/failed state periodically
+      const cycle = (time * 0.25) % Math.PI
+      const failureRatio = Math.sin(cycle) // 0 to 1
+      const orderNode = nodes[1]
+      if (failureRatio > 0.7) {
+        orderNode.state = 'FAILED'
+        orderNode.color = '#EF4444'
+      } else if (failureRatio > 0.4) {
+        orderNode.state = 'DEGRADED'
+        orderNode.color = '#F59E0B'
+      } else {
+        orderNode.state = 'HEALTHY'
+        orderNode.color = '#10B981'
+      }
+
+      // Draw Edges
+      edges.forEach((edge) => {
+        const nSource = nodes[edge.source]
+        const nTarget = nodes[edge.target]
+        const x1 = nSource.px * width
+        const y1 = nSource.py * height
+        const x2 = nTarget.px * width
+        const y2 = nTarget.py * height
+
+        ctx.strokeStyle = '#1A1A1A'
+        ctx.lineWidth = 2
+        ctx.beginPath()
+        ctx.moveTo(x1, y1)
+        ctx.lineTo(x2, y2)
+        ctx.stroke()
+
+        // Draw flowing traffic particles
+        ctx.fillStyle = nTarget.color
+        edge.progress = edge.progress.map((p) => {
+          let nextP = p + 0.005
+          if (nextP > 1) nextP = 0
+          const px = x1 + (x2 - x1) * nextP
+          const py = y1 + (y2 - y1) * nextP
+          ctx.beginPath()
+          ctx.arc(px, py, 3, 0, Math.PI * 2)
+          ctx.fill()
+          return nextP
+        })
+      })
+
+      // Draw Nodes
+      nodes.forEach((n) => {
+        const nx = n.px * width
+        const ny = n.py * height
+
+        n.pulse = Math.sin(time * 3 + (n.id === 'order' ? 3 : 0)) * 6 + 12
+
+        // Glow ring
+        ctx.shadowBlur = n.pulse
+        ctx.shadowColor = n.color
+        ctx.fillStyle = n.color
+        ctx.beginPath()
+        ctx.arc(nx, ny, n.size, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.shadowBlur = 0 // reset
+
+        // Label
+        ctx.fillStyle = '#888888'
+        ctx.font = "11px 'JetBrains Mono', monospace"
+        ctx.textAlign = 'center'
+        ctx.fillText(n.label, nx, ny - n.size - 10)
+      })
+
+      animationFrameId = requestAnimationFrame(render)
+    }
+
+    render()
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      cancelAnimationFrame(animationFrameId)
+    }
+  }, [])
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg- selection:text-indigo-200">
-      {/* Background Decorative Glows */}
-      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg- rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[400px] h-[400px] bg- rounded-full blur-[100px] pointer-events-none" />
+    <div className="bg-black text-white font-['Inter'] min-h-screen flex flex-col relative overflow-x-hidden selection:bg-[#7C3AED]/30 selection:text-white">
+      {/* BACKGROUND CANVAS */}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none opacity-40 z-0" />
 
-      {/* Navigation Header */}
-      <nav className="fixed top-0 left-0 right-0 h-16 bg- border-b border- z-50 px-6 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2.5 font-bold text-lg tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">
-          <Activity className="text-indigo-500" size={22} />
+      {/* FIXED NAVBAR */}
+      <nav className="fixed top-0 left-0 right-0 h-[60px] bg-black/80 backdrop-blur-[12px] border-b border-[#1A1A1A] z-[1000] px-6 flex items-center justify-between">
+        <Link to="/" className="font-['Space_Grotesk'] text-[18px] font-bold tracking-[3px] text-white">
           ARCHAOS
         </Link>
-        <div className="flex items-center gap-4">
-          <Link to="/editor" className="text-xs text-slate-350 hover:text-slate-100 transition-colors font-medium">
+        <div className="flex items-center gap-8 text-[14px]">
+          <Link to="/editor" className="text-[#888888] hover:text-white transition-colors">
             Playground
           </Link>
-          <Link to="/scenarios" className="text-xs text-slate-350 hover:text-slate-100 transition-colors font-medium">
+          <Link to="/scenarios" className="text-[#888888] hover:text-white transition-colors">
             Scenarios
           </Link>
-          <Link to="/auth" className="px-4 py-1.5 text-xs bg-indigo-600 hover:bg-indigo-500 rounded-xl font-semibold border border- transition-all shadow-lg">
-            Get Started
+          <Link
+            to="/auth"
+            state={{ mode: 'register' }}
+            className="px-5 py-1.5 text-xs bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-semibold rounded-lg shadow-lg hover:opacity-85 active:scale-[0.98] transition-all cursor-pointer"
+          >
+            Sign Up
           </Link>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6 flex flex-col items-center text-center max-w-4xl mx-auto space-y-8 z-10">
-        <div className="inline-flex items-center gap-2 bg- border border-indigo-850 px-3 py-1 rounded-full text-xs font-semibold text-indigo-300">
-          <Zap size={13} className="animate-bounce" />
-          Interactive Visual Distributed Systems Simulator
+      {/* HERO SECTION */}
+      <section className="h-screen w-screen flex flex-col items-center justify-center px-6 relative z-10 select-none text-center">
+        <div className="max-w-4xl mx-auto space-y-6">
+          <h1 className="text-[64px] font-bold font-['Space_Grotesk'] leading-[1.05] tracking-tight text-white max-w-3xl mx-auto">
+            Watch your architecture fail. Safely.
+          </h1>
+          <p className="text-[20px] text-[#888888] font-light max-w-2xl mx-auto">
+            Build any distributed system. Inject chaos. Watch what breaks.
+          </p>
+          <div className="flex items-center justify-center gap-4 pt-4">
+            <button
+              onClick={() => navigate('/editor')}
+              className="px-6 py-3.5 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-bold rounded-lg flex items-center gap-2 shadow-lg shadow-[#7C3AED]/20 hover:opacity-90 active:scale-[0.98] transition-all cursor-pointer text-sm"
+            >
+              <Play size={14} className="fill-white" />
+              Start Simulating
+            </button>
+            <button
+              onClick={() => {
+                const element = document.getElementById('scenario-preview')
+                element?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="px-6 py-3.5 bg-transparent border border-[#222222] hover:border-[#888888] text-[#888888] hover:text-white font-semibold rounded-lg transition-all text-sm cursor-pointer"
+            >
+              View Scenarios
+            </button>
+          </div>
         </div>
+      </section>
 
-        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight leading-[1.1] text-transparent bg-clip-text bg-gradient-to-b from-slate-50 via-slate-100 to-slate-400">
-          Master Complex Architectures <br className="hidden sm:block" />
-          Through <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-500">Controlled Chaos</span>
-        </h1>
-
-        <p className="text-sm sm:text-base text-slate-400 leading-relaxed max-w-2xl font-medium">
-          Drag and drop services, CDN caches, databases, and message queues on an interactive canvas. Inject network partitions, OOM leaks, database connection pool storms, and see failures cascade in real time.
+      {/* SECTION 2 — SCENARIO PREVIEW */}
+      <section id="scenario-preview" className="py-20 px-6 max-w-6xl mx-auto w-full z-10 relative bg-black">
+        <h2 className="text-3xl font-bold font-['Space_Grotesk'] text-center mb-4">Resilience Scenarios</h2>
+        <p className="text-[#888888] text-center max-w-lg mx-auto text-sm mb-12">
+          Discover pre-designed distributed bottlenecks and launch them directly.
         </p>
 
-        <div className="flex items-center justify-center gap-4 pt-2">
-          <Link
-            to="/editor"
-            className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-slate-100 font-bold rounded-xl flex items-center gap-2 shadow-lg shadow-indigo-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer text-sm"
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Card 1: The Cascade */}
+          <div
+            onClick={() => navigate('/learn/the-cascade')}
+            className="group bg-[#0A0A0A] border border-[#222222] hover:border-[#7C3AED] hover:shadow-[0_0_20px_rgba(124,58,237,0.2)] rounded-xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between h-56"
           >
-            Launch Sandbox
-            <ArrowRight size={16} />
-          </Link>
-          <a
-            href="#scenarios"
-            className="px-6 py-3 bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl text-slate-300 font-semibold text-sm transition-all cursor-pointer"
-          >
-            Explore Library
-          </a>
-        </div>
-      </section>
-
-      {/* Feature Grid */}
-      <section className="py-16 px-6 max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6 z-10">
-        <div className="p-6 bg- border border- rounded-2xl space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-indigo-950 border border- text-indigo-400 flex items-center justify-center">
-            <Cpu size={20} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-100">Discrete-Event Engine</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            State changes are processed inside a low-latency Web Worker, maintaining a fluid 60 FPS visual canvas displaying animated flowing HTTP, gRPC, and queue traffic.
-          </p>
-        </div>
-
-        <div className="p-6 bg- border border- rounded-2xl space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-950 border border- text-purple-400 flex items-center justify-center">
-            <Zap size={20} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-100">Controlled Failures</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Manually trigger CPU spikes, kill database leaders, break synchronization replication bridges, or schedule timed chaos scripts to test resilience thresholds.
-          </p>
-        </div>
-
-        <div className="p-6 bg- border border- rounded-2xl space-y-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-950 border border- text-emerald-400 flex items-center justify-center">
-            <ShieldCheck size={20} />
-          </div>
-          <h3 className="text-lg font-bold text-slate-100">Guided Walkthroughs</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Experience interactive scenarios. The simulation auto-pauses at critical points to test your diagnosis skills with interactive quizzes before continuing.
-          </p>
-        </div>
-      </section>
-
-      {/* Scenario Grid Section */}
-      <section id="scenarios" className="py-20 px-6 max-w-6xl mx-auto space-y-12 z-10 scroll-mt-16">
-        <div className="text-center space-y-3">
-          <h2 className="text-3xl font-bold tracking-tight text-slate-100">Scenario Library</h2>
-          <p className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
-            Explore 8 pre-built system vulnerabilities and comparison models
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SCENARIOS.map((s) => (
-            <div
-              key={s.id}
-              className="group relative bg- hover:bg- border border-slate-850 hover:border- rounded-2xl p-5 flex flex-col justify-between space-y-6 shadow-xl transition-all hover:-translate-y-1"
-            >
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-wider">{s.category}</span>
-                  <span className="text-[9px] bg- px-2 py-0.5 rounded-full border border- font-bold">{s.difficulty}</span>
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-slate-100 group-hover:text-indigo-400 transition-colors">{s.name}</h4>
-                  <p className="mt-2 text-xs text-slate-400 leading-relaxed">{s.desc}</p>
-                </div>
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#888888]">Resilience</span>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/20 font-bold">
+                  BEGINNER
+                </span>
               </div>
-
-              {/* CTA buttons inside card */}
-              <div className="grid grid-cols-2 gap-2 pt-2 border-t border-">
-                <Link
-                  to={`/learn/${s.id}`}
-                  className="py-2 px-2.5 bg- hover:bg- border border- rounded-xl text-[10px] font-bold text-indigo-300 transition-colors flex items-center justify-center gap-1"
-                >
-                  <Play size={10} />
-                  Walkthrough
-                </Link>
-                <button
-                  onClick={() => {
-                    // Navigate to Editor and load topology fallback directly
-                    navigate(`/editor?scenario=${s.id}`)
-                  }}
-                  className="py-2 px-2.5 bg- hover:bg-slate-800 border border-slate-800 hover:border- rounded-xl text-[10px] font-bold text-slate-350 hover:text-slate-150 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                >
-                  <Eye size={10} />
-                  Sandbox
-                </button>
-              </div>
+              <h3 className="text-lg font-bold font-['Space_Grotesk'] group-hover:text-[#7C3AED] transition-colors">
+                The Cascade
+              </h3>
+              <p className="text-xs text-[#888888] mt-2 leading-relaxed line-clamp-3">
+                Watch downstream latency propogate upstream and freeze an unprotected thread pool.
+              </p>
             </div>
-          ))}
+            <button className="w-full mt-4 py-2 bg-transparent hover:bg-[#7C3AED] border border-[#222222] group-hover:border-[#7C3AED] text-xs text-white rounded-lg transition-all font-semibold flex items-center justify-center gap-1.5">
+              <Play size={12} className="fill-white" /> Launch
+            </button>
+          </div>
+
+          {/* Card 2: Retry Storm */}
+          <div
+            onClick={() => navigate('/learn/the-retry-storm')}
+            className="group bg-[#0A0A0A] border border-[#222222] hover:border-[#7C3AED] hover:shadow-[0_0_20px_rgba(124,58,237,0.2)] rounded-xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between h-56"
+          >
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#888888]">Traffic</span>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-[#F59E0B]/15 text-[#F59E0B] border border-[#F59E0B]/20 font-bold">
+                  INTERMEDIATE
+                </span>
+              </div>
+              <h3 className="text-lg font-bold font-['Space_Grotesk'] group-hover:text-[#7C3AED] transition-colors">
+                Retry Storm
+              </h3>
+              <p className="text-xs text-[#888888] mt-2 leading-relaxed line-clamp-3">
+                See client retries multiply load and crash a struggling microservice.
+              </p>
+            </div>
+            <button className="w-full mt-4 py-2 bg-transparent hover:bg-[#7C3AED] border border-[#222222] group-hover:border-[#7C3AED] text-xs text-white rounded-lg transition-all font-semibold flex items-center justify-center gap-1.5">
+              <Play size={12} className="fill-white" /> Launch
+            </button>
+          </div>
+
+          {/* Card 3: Graceful Degradation */}
+          <div
+            onClick={() => navigate('/learn/graceful-degradation')}
+            className="group bg-[#0A0A0A] border border-[#222222] hover:border-[#7C3AED] hover:shadow-[0_0_20px_rgba(124,58,237,0.2)] rounded-xl p-6 transition-all duration-300 cursor-pointer flex flex-col justify-between h-56"
+          >
+            <div>
+              <div className="flex justify-between items-center mb-3">
+                <span className="text-[10px] uppercase font-bold tracking-wider text-[#888888]">Resilience</span>
+                <span className="text-[9px] px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/20 font-bold">
+                  BEGINNER
+                </span>
+              </div>
+              <h3 className="text-lg font-bold font-['Space_Grotesk'] group-hover:text-[#7C3AED] transition-colors">
+                Graceful Degradation
+              </h3>
+              <p className="text-xs text-[#888888] mt-2 leading-relaxed line-clamp-3">
+                Tripping circuit breakers to isolate service failures and keep key flows online.
+              </p>
+            </div>
+            <button className="w-full mt-4 py-2 bg-transparent hover:bg-[#7C3AED] border border-[#222222] group-hover:border-[#7C3AED] text-xs text-white rounded-lg transition-all font-semibold flex items-center justify-center gap-1.5">
+              <Play size={12} className="fill-white" /> Launch
+            </button>
+          </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="mt-auto border-t border-slate-900 bg- py-8 px-6 text-center text-xs text-slate-500 font-mono">
-        &copy; {new Date().getFullYear()} Archaos Distributed Systems. All rights reserved.
+      {/* SECTION 3 — FEATURE ROW */}
+      <section className="py-20 px-6 max-w-6xl mx-auto w-full z-10 relative bg-black border-t border-[#1A1A1A]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center md:text-left">
+          {/* Feature 1 */}
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-[#EF4444]/10 border border-[#EF4444]/20 flex items-center justify-center mx-auto md:mx-0">
+              <Skull className="text-[#EF4444]" size={20} />
+            </div>
+            <h3 className="text-xl font-bold font-['Space_Grotesk']">🔴 Chaos Injection</h3>
+            <p className="text-xs text-[#888888] leading-relaxed">
+              Kill service instances, partition network paths, simulate Slow Loris API dependencies, or trigger artificial CPU leaks.
+            </p>
+          </div>
+
+          {/* Feature 2 */}
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-[#7C3AED]/10 border border-[#7C3AED]/20 flex items-center justify-center mx-auto md:mx-0">
+              <Brain className="text-[#7C3AED]" size={20} />
+            </div>
+            <h3 className="text-xl font-bold font-['Space_Grotesk']">🤖 AI Narration</h3>
+            <p className="text-xs text-[#888888] leading-relaxed">
+              A live streaming AI Copilot analyzes queue backups, rates, and patterns, predicting failure cascades in real-time.
+            </p>
+          </div>
+
+          {/* Feature 3 */}
+          <div className="space-y-4">
+            <div className="w-12 h-12 rounded-xl bg-[#06B6D4]/10 border border-[#06B6D4]/20 flex items-center justify-center mx-auto md:mx-0">
+              <ShieldAlert className="text-[#06B6D4]" size={20} />
+            </div>
+            <h3 className="text-xl font-bold font-['Space_Grotesk']">📡 Blast Radius</h3>
+            <p className="text-xs text-[#888888] leading-relaxed">
+              Analyze exactly what percentage of users are impacted by dependent failures using deep graph traversal logic.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="border-t border-[#1A1A1A] py-8 text-center text-xs text-[#444444] font-mono mt-auto">
+        &copy; {new Date().getFullYear()} ARCHAOS. All rights reserved.
       </footer>
     </div>
   )
