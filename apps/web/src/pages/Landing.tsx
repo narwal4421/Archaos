@@ -1,1347 +1,1863 @@
+
+// ARCHAOS — New Landing Page
+// Drop this file into apps/web/src/pages/Landing.tsx
+// Fonts loaded via inline style tag — no additional installs needed
+
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import {
-  Play, Skull, Brain, ShieldAlert, Cpu, HelpCircle, Users,
-  ChevronRight, Zap, GitBranch,
-  AlertTriangle, CheckCircle, ArrowRight, BookOpen,
-  BarChart2, Shield, Network, GraduationCap,
-  Wrench, TrendingUp, Eye, Terminal, Flame
+  Play, ChevronRight, CheckCircle, ArrowRight,
+  Brain, Shield, BarChart2, Terminal,
+  GitBranch, BookOpen,
+  GraduationCap, ShieldAlert, Flame, Cpu,
 } from 'lucide-react'
 
-// ─── Animated hero canvas ───────────────────────────────────────────────────
-function HeroCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+// ─── CSS ─────────────────────────────────────────────────────────────────────
+const CSS = `
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
+  :root {
+    --bg:        #080B0F;
+    --bg2:       #0E1117;
+    --bg3:       #161B23;
+    --border:    #1E2530;
+    --border2:   #2D3748;
+    --text1:     #E8EDF3;
+    --text2:     #8B95A3;
+    --text3:     #4A5568;
+    --indigo:    #6366F1;
+    --green:     #10B981;
+    --amber:     #F59E0B;
+    --red:       #EF4444;
+    --orange:    #F97316;
+    --cyan:      #06B6D4;
+    --purple:    #7C3AED;
+    --recovering:#6366F1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text1);
+    font-family: 'DM Sans', sans-serif;
+    overflow-x: hidden;
+  }
+
+  .font-display { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.02em; }
+  .font-mono    { font-family: 'JetBrains Mono', monospace; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(40px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes pulse-ring {
+    0%   { transform: scale(1);   opacity: 0.8; }
+    70%  { transform: scale(2.5); opacity: 0; }
+    100% { transform: scale(2.5); opacity: 0; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50%       { opacity: 0; }
+  }
+  @keyframes scan {
+    0%   { top: 0; }
+    100% { top: 100%; }
+  }
+  @keyframes flow {
+    0%   { stroke-dashoffset: 1000; }
+    100% { stroke-dashoffset: 0; }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 8px 0px var(--indigo); }
+    50%       { box-shadow: 0 0 24px 4px var(--indigo); }
+  }
+  @keyframes cascade-wave {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes count-up {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes ticker {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  .animate-fade-up  { animation: fadeUp 0.7s ease forwards; }
+  .animate-fade-in  { animation: fadeIn 0.5s ease forwards; }
+  .blink-cursor::after { content: '|'; animation: blink 1s step-end infinite; }
+
+  .scanline {
+    position: absolute; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(99,102,241,0.15), transparent);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+  }
+
+  .cascade-text {
+    background: linear-gradient(90deg,
+      var(--green)  0%,
+      var(--amber)  30%,
+      var(--red)    60%,
+      var(--amber)  80%,
+      var(--green)  100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: cascade-wave 4s linear infinite;
+  }
+
+  .section-divider {
+    width: 48px; height: 3px;
+    background: linear-gradient(90deg, var(--indigo), var(--cyan));
+    border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .node-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    position: relative; display: inline-block;
+  }
+  .node-dot::before {
+    content: '';
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 1px solid currentColor; opacity: 0.4;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+
+  .ticker-wrap {
+    overflow: hidden;
+    white-space: nowrap;
+    width: 100%;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 30s linear infinite;
+  }
+
+  .feature-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--indigo) !important;
+    box-shadow: 0 0 32px rgba(99,102,241,0.12);
+  }
+
+  .scenario-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 24px rgba(99,102,241,0.1);
+  }
+
+  .cta-btn {
+    position: relative; overflow: hidden;
+  }
+  .cta-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s ease;
+  }
+  .cta-btn:hover::before { transform: translateX(100%); }
+`
+
+// ─── HOOKS ────────────────────────────────────────────────────────────────────
+function useInView(threshold = 0.15) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [inView, setInView] = useState(false)
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    let animationFrameId: number
-    let width = (canvas.width = window.innerWidth)
-    let height = (canvas.height = window.innerHeight)
-
-    const handleResize = () => {
-      width = canvas.width = window.innerWidth
-      height = canvas.height = window.innerHeight
-    }
-    window.addEventListener('resize', handleResize)
-
-    const nodes = [
-      { id: 'gateway', label: 'API Gateway', px: 0.15, py: 0.5, size: 10, color: '#06B6D4', pulse: 0, state: 'HEALTHY' },
-      { id: 'order', label: 'Order Svc', px: 0.38, py: 0.33, size: 8, color: '#10B981', pulse: 0, state: 'HEALTHY' },
-      { id: 'user', label: 'User Svc', px: 0.38, py: 0.67, size: 8, color: '#10B981', pulse: 0, state: 'HEALTHY' },
-      { id: 'payment', label: 'Payment Svc', px: 0.62, py: 0.4, size: 8, color: '#10B981', pulse: 0, state: 'HEALTHY' },
-      { id: 'billing', label: 'Billing Svc', px: 0.62, py: 0.65, size: 7, color: '#10B981', pulse: 0, state: 'HEALTHY' },
-      { id: 'db', label: 'PostgreSQL DB', px: 0.85, py: 0.5, size: 12, color: '#3B82F6', pulse: 0, state: 'HEALTHY' },
-    ]
-
-    const edges = [
-      { source: 0, target: 1, progress: [0, 0.4, 0.75] },
-      { source: 0, target: 2, progress: [0.2, 0.6, 0.85] },
-      { source: 1, target: 3, progress: [0.1, 0.5] },
-      { source: 2, target: 4, progress: [0.3, 0.7] },
-      { source: 3, target: 5, progress: [0.15, 0.55, 0.9] },
-      { source: 4, target: 5, progress: [0.05, 0.45, 0.8] },
-    ]
-
-    let time = 0
-
-    const render = () => {
-      ctx.fillStyle = '#000000'
-      ctx.fillRect(0, 0, width, height)
-
-      ctx.strokeStyle = '#050505'
-      ctx.lineWidth = 1
-      const gridSize = 50
-      for (let x = 0; x < width; x += gridSize) {
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke()
-      }
-      for (let y = 0; y < height; y += gridSize) {
-        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
-      }
-
-      time += 0.012
-
-      const cycle = (time * 0.2) % Math.PI
-      const failureRatio = Math.sin(cycle)
-      const orderNode = nodes[1]
-      if (failureRatio > 0.7) {
-        orderNode.state = 'FAILED'; orderNode.color = '#EF4444'
-      } else if (failureRatio > 0.4) {
-        orderNode.state = 'DEGRADED'; orderNode.color = '#F59E0B'
-      } else {
-        orderNode.state = 'HEALTHY'; orderNode.color = '#10B981'
-      }
-
-      edges.forEach((edge) => {
-        const nSource = nodes[edge.source]
-        const nTarget = nodes[edge.target]
-        const x1 = nSource.px * width, y1 = nSource.py * height
-        const x2 = nTarget.px * width, y2 = nTarget.py * height
-
-        ctx.strokeStyle = '#181818'
-        ctx.lineWidth = 1.5
-        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
-
-        ctx.fillStyle = nTarget.color
-        edge.progress = edge.progress.map((p) => {
-          let nextP = p + 0.004
-          if (nextP > 1) nextP = 0
-          const px = x1 + (x2 - x1) * nextP
-          const py = y1 + (y2 - y1) * nextP
-          ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI * 2); ctx.fill()
-          return nextP
-        })
-      })
-
-      nodes.forEach((n) => {
-        const nx = n.px * width, ny = n.py * height
-        n.pulse = Math.sin(time * 2.5 + (n.id === 'order' ? 3 : 0)) * 7 + 14
-        ctx.shadowBlur = n.pulse
-        ctx.shadowColor = n.color
-        ctx.fillStyle = n.color
-        ctx.beginPath(); ctx.arc(nx, ny, n.size, 0, Math.PI * 2); ctx.fill()
-        ctx.shadowBlur = 0
-
-        ctx.fillStyle = '#666666'
-        ctx.font = "10px 'JetBrains Mono', monospace"
-        ctx.textAlign = 'center'
-        ctx.fillText(n.label, nx, ny - n.size - 8)
-      })
-
-      animationFrameId = requestAnimationFrame(render)
-    }
-
-    render()
-    return () => {
-      window.removeEventListener('resize', handleResize)
-      cancelAnimationFrame(animationFrameId)
-    }
-  }, [])
-
-  return <canvas ref={canvasRef} className="absolute inset-0 w-full h-full pointer-events-none opacity-25 z-0" />
+    const el = ref.current; if (!el) return
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setInView(true); obs.disconnect() } },
+      { threshold }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [threshold])
+  return { ref, inView }
 }
 
-// ─── Scroll-triggered fade-in wrapper ───────────────────────────────────────
-function FadeIn({ children, delay = 0, className = '' }: { children: React.ReactNode; delay?: number; className?: string }) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [visible, setVisible] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect() } },
-      { threshold: 0.1 }
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
+function FadeUp({ children, delay = 0, className = '' }: {
+  children: React.ReactNode; delay?: number; className?: string
+}) {
+  const { ref, inView } = useInView()
   return (
-    <div
-      ref={ref}
-      className={className}
-      style={{
-        opacity: visible ? 1 : 0,
-        transform: visible ? 'translateY(0)' : 'translateY(32px)',
-        transition: `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`,
-      }}
-    >
+    <div ref={ref} className={className} style={{
+      opacity: inView ? 1 : 0,
+      transform: inView ? 'translateY(0)' : 'translateY(40px)',
+      transition: `opacity 0.7s ease ${delay}ms, transform 0.7s ease ${delay}ms`
+    }}>
       {children}
     </div>
   )
 }
 
-// ─── Section label pill ──────────────────────────────────────────────────────
-function SectionPill({ icon: Icon, label, color }: { icon: React.ElementType; label: string; color: string }) {
+function AnimatedNumber({ target, suffix = '' }: { target: number; suffix?: string }) {
+  const { ref, inView } = useInView()
+  const [val, setVal] = useState(0)
+  useEffect(() => {
+    if (!inView) return
+    const dur = 1200
+    const step = (ts: number, startTs: number) => {
+      const p = Math.min((ts - startTs) / dur, 1)
+      setVal(Math.round(p * target))
+      if (p < 1) requestAnimationFrame(ts2 => step(ts2, startTs))
+    }
+    requestAnimationFrame(ts => step(ts, ts))
+  }, [inView, target])
   return (
-    <div
-      className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold tracking-wide uppercase mb-4"
-      style={{ background: `${color}15`, border: `1px solid ${color}40`, color }}
-    >
-      <Icon size={12} />
-      {label}
+    <span ref={ref} className="font-display" style={{ fontSize: 'inherit' }}>
+      {val}{suffix}
+    </span>
+  )
+}
+
+// ─── HERO CANVAS ──────────────────────────────────────────────────────────────
+function HeroCanvas() {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const canvas = ref.current; if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+    let raf: number
+    let W = canvas.width = window.innerWidth
+    let H = canvas.height = window.innerHeight
+    const onResize = () => {
+      W = canvas.width = window.innerWidth
+      H = canvas.height = window.innerHeight
+    }
+    window.addEventListener('resize', onResize)
+
+    // Topology
+    const NODES = [
+      { id: 'gw', label: 'API Gateway', px: 0.10, py: 0.50, r: 11, base: '#06B6D4' },
+      { id: 'order', label: 'Order Svc', px: 0.30, py: 0.32, r: 9, base: '#10B981' },
+      { id: 'user', label: 'User Svc', px: 0.30, py: 0.68, r: 9, base: '#10B981' },
+      { id: 'payment', label: 'Payment Svc', px: 0.55, py: 0.38, r: 9, base: '#10B981' },
+      { id: 'billing', label: 'Billing Svc', px: 0.55, py: 0.62, r: 9, base: '#10B981' },
+      { id: 'db', label: 'PostgreSQL DB', px: 0.82, py: 0.50, r: 13, base: '#3B82F6' },
+    ]
+    const EDGES = [
+      [0, 1], [0, 2], [1, 3], [2, 4], [3, 5], [4, 5]
+    ]
+    // traffic particles per edge
+    const particles = EDGES.map(() =>
+      Array.from({ length: 3 }, (_, i) => ({ t: i / 3, speed: 0.003 + Math.random() * 0.002 }))
+    )
+
+    let time = 0
+
+    // cascade color for each node based on cycle phase
+    function nodeColor(id: string, phase: number): string {
+      // phase 0-1 repeating
+      // DB degrades at 0.15, fails 0.25 → recovery 0.70
+      // payment 0.25/0.38 → 0.72
+      // billing 0.32/0.44 → 0.74
+      // order   0.40/0.54 → 0.76
+      // user    0.42/0.56 → 0.78
+      // gateway 0.50/0.64 → 0.80
+      const schedules: Record<string, [number, number, number, number, string]> = {
+        db: [0.15, 0.25, 0.68, 0.80, '#3B82F6'],
+        payment: [0.25, 0.38, 0.70, 0.82, '#10B981'],
+        billing: [0.32, 0.44, 0.72, 0.84, '#10B981'],
+        order: [0.40, 0.54, 0.74, 0.86, '#10B981'],
+        user: [0.42, 0.56, 0.76, 0.88, '#10B981'],
+        gw: [0.50, 0.64, 0.78, 0.90, '#06B6D4'],
+      }
+      const [deg, fail, rec, ok, base] = schedules[id]
+      if (phase < deg) return base
+      if (phase < fail) return '#F59E0B'
+      if (phase < rec) return '#EF4444'
+      if (phase < ok) return '#6366F1'
+      return base
+    }
+
+    function draw() {
+      time += 0.008
+      const phase = (time * 0.18) % 1   // cycle ~7s
+
+      // background
+      ctx.fillStyle = '#080B0F'
+      ctx.fillRect(0, 0, W, H)
+
+      // dot grid
+      ctx.fillStyle = 'rgba(30,37,48,0.6)'
+      const gs = 40
+      for (let x = 0; x < W; x += gs)
+        for (let y = 0; y < H; y += gs) {
+          ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI * 2); ctx.fill()
+        }
+
+      // chaos text overlay
+      if (phase > 0.20 && phase < 0.68) {
+        const alpha = phase < 0.25 ? (phase - 0.20) / 0.05
+          : phase > 0.64 ? (0.68 - phase) / 0.04 : 1
+        ctx.save()
+        ctx.globalAlpha = alpha * 0.7
+        ctx.fillStyle = '#EF4444'
+        ctx.font = "bold 11px 'JetBrains Mono'"
+        ctx.fillText('⚡ CHAOS INJECTED — 4000ms DB LATENCY', W * 0.5 - 160, H * 0.12)
+        ctx.restore()
+      }
+      if (phase > 0.68 && phase < 0.92) {
+        const alpha = phase < 0.72 ? (phase - 0.68) / 0.04
+          : phase > 0.88 ? (0.92 - phase) / 0.04 : 1
+        ctx.save()
+        ctx.globalAlpha = alpha * 0.6
+        ctx.fillStyle = '#10B981'
+        ctx.font = "bold 11px 'JetBrains Mono'"
+        ctx.fillText('✓ RECOVERING — CIRCUIT BREAKERS PROTECTING', W * 0.5 - 175, H * 0.12)
+        ctx.restore()
+      }
+
+      // edges + particles
+      EDGES.forEach(([si, ti], ei) => {
+        const S = NODES[si], T = NODES[ti]
+        const x1 = S.px * W, y1 = S.py * H, x2 = T.px * W, y2 = T.py * H
+        const tc = nodeColor(T.id, phase)
+
+        // edge line
+        ctx.strokeStyle = '#1E2530'
+        ctx.lineWidth = 1.5
+        ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
+
+        // particles
+        particles[ei].forEach(p => {
+          p.t = (p.t + p.speed) % 1
+          const px2 = x1 + (x2 - x1) * p.t, py2 = y1 + (y2 - y1) * p.t
+          // particle color: interpolate source to target color
+          const isError = nodeColor(T.id, phase) === '#EF4444'
+          ctx.fillStyle = isError ? '#EF4444' : tc
+          ctx.globalAlpha = isError ? 0.9 : 0.75
+          ctx.beginPath(); ctx.arc(px2, py2, 3, 0, Math.PI * 2); ctx.fill()
+          ctx.globalAlpha = 1
+        })
+      })
+
+      // nodes
+      NODES.forEach(n => {
+        const nx = n.px * W, ny = n.py * H
+        const color = nodeColor(n.id, phase)
+        const glowR = n.r + 8 + Math.sin(time * 3) * 4
+
+        // glow ring
+        const grad = ctx.createRadialGradient(nx, ny, n.r, nx, ny, glowR + 8)
+        grad.addColorStop(0, color + '40')
+        grad.addColorStop(1, 'transparent')
+        ctx.fillStyle = grad
+        ctx.beginPath(); ctx.arc(nx, ny, glowR + 8, 0, Math.PI * 2); ctx.fill()
+
+        // node circle
+        ctx.shadowBlur = 16; ctx.shadowColor = color
+        ctx.fillStyle = color
+        ctx.beginPath(); ctx.arc(nx, ny, n.r, 0, Math.PI * 2); ctx.fill()
+        ctx.shadowBlur = 0
+
+        // label
+        ctx.fillStyle = color
+        ctx.globalAlpha = 0.8
+        ctx.font = "9px 'JetBrains Mono'"
+        ctx.textAlign = 'center'
+        ctx.fillText(n.label, nx, ny - n.r - 8)
+        ctx.textAlign = 'left'
+        ctx.globalAlpha = 1
+      })
+
+      raf = requestAnimationFrame(draw)
+    }
+    draw()
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', onResize) }
+  }, [])
+  return (
+    <canvas ref={ref}
+      className="absolute inset-0 w-full h-full pointer-events-none"
+      style={{ opacity: 0.55, zIndex: 0 }}
+    />
+  )
+}
+
+// ─── TYPING EFFECT ────────────────────────────────────────────────────────────
+function TypingText({ phrases }: { phrases: string[] }) {
+  const [pi, setPi] = useState(0)
+  const [ci, setCi] = useState(0)
+  const [del, setDel] = useState(false)
+  useEffect(() => {
+    const phrase = phrases[pi]
+    const timeout = del
+      ? (ci === 0
+        ? setTimeout(() => { setDel(false); setPi(p => (p + 1) % phrases.length) }, 400)
+        : setTimeout(() => setCi(c => c - 1), 40))
+      : (ci === phrase.length
+        ? setTimeout(() => setDel(true), 1800)
+        : setTimeout(() => setCi(c => c + 1), 60))
+    return () => clearTimeout(timeout)
+  }, [pi, ci, del, phrases])
+  return (
+    <span className="font-mono" style={{ color: 'var(--green)' }}>
+      {phrases[pi].slice(0, ci)}
+      <span style={{ animation: 'blink 1s step-end infinite', opacity: 1 }}>|</span>
+    </span>
+  )
+}
+
+// ─── SECTION HEADER ───────────────────────────────────────────────────────────
+function SectionHeader({ pill, title, sub }: {
+  pill: string; title: React.ReactNode; sub?: string
+}) {
+  return (
+    <div style={{ textAlign: 'center', marginBottom: 56 }}>
+      <div className="section-divider" />
+      <div className="font-mono" style={{
+        fontSize: 11, letterSpacing: 3, color: 'var(--indigo)',
+        textTransform: 'uppercase', marginBottom: 16
+      }}>{pill}</div>
+      <h2 className="font-display" style={{
+        fontSize: 'clamp(36px, 5vw, 64px)', lineHeight: 1.05,
+        color: 'var(--text1)', marginBottom: 16
+      }}>{title}</h2>
+      {sub && <p style={{
+        color: 'var(--text2)', fontSize: 16, maxWidth: 560, margin: '0 auto', lineHeight: 1.7
+      }}>{sub}</p>}
     </div>
   )
 }
 
-// ─── Architecture Flow Diagram (inline SVG) ──────────────────────────────────
-function ArchitectureDiagram() {
-  const nodes = [
-    { x: 60,  y: 160, label: 'Client',           sub: 'Browser / App',  color: '#06B6D4', icon: '🌐' },
-    { x: 200, y: 160, label: 'API Gateway',       sub: 'Entry Point',    color: '#7C3AED', icon: '🔀' },
-    { x: 370, y: 80,  label: 'Order Service',     sub: '2 Replicas',     color: '#10B981', icon: '📦' },
-    { x: 370, y: 240, label: 'User Service',      sub: '2 Replicas',     color: '#10B981', icon: '👤' },
-    { x: 550, y: 80,  label: 'Payment Service',   sub: '1 Replica',      color: '#F59E0B', icon: '💳' },
-    { x: 550, y: 240, label: 'Billing Service',   sub: '1 Replica',      color: '#F59E0B', icon: '🧾' },
-    { x: 730, y: 160, label: 'PostgreSQL DB',     sub: 'Pool: 20 conns', color: '#EF4444', icon: '🗄️' },
-  ]
-
-  const edges = [
-    { x1: 110, y1: 160, x2: 200, y2: 160 },
-    { x1: 290, y1: 145, x2: 370, y2: 100 },
-    { x1: 290, y1: 175, x2: 370, y2: 260 },
-    { x1: 465, y1: 100, x2: 550, y2: 100 },
-    { x1: 465, y1: 260, x2: 550, y2: 260 },
-    { x1: 645, y1: 100, x2: 730, y2: 150 },
-    { x1: 645, y1: 260, x2: 730, y2: 170 },
-  ]
-
+// ─── TRAFFIC FLOW SVG ─────────────────────────────────────────────────────────
+function TrafficFlowSVG({ failing = false }: { failing?: boolean }) {
+  const pathColor = failing ? '#EF4444' : '#6366F1'
   return (
-    <div className="w-full overflow-x-auto">
-      <svg viewBox="0 0 840 340" className="w-full max-w-4xl mx-auto" style={{ minWidth: 600 }}>
-        <defs>
-          <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-            <polygon points="0 0, 8 3, 0 6" fill="#333333" />
-          </marker>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge><feMergeNode in="coloredBlur" /><feMergeNode in="SourceGraphic" /></feMerge>
-          </filter>
-        </defs>
-
-        {/* Edges */}
-        {edges.map((e, i) => (
-          <line key={i} x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-            stroke="#2A2A2A" strokeWidth="1.5" markerEnd="url(#arrowhead)" />
-        ))}
-
-        {/* Nodes */}
-        {nodes.map((n, i) => (
-          <g key={i}>
-            <rect
-              x={n.x} y={n.y - 30} width={90} height={50}
-              rx="8" ry="8"
-              fill="#0D0D0D"
-              stroke={n.color}
-              strokeWidth="1"
-              style={{ filter: `drop-shadow(0 0 6px ${n.color}55)` }}
-            />
-            <text x={n.x + 45} y={n.y - 12} textAnchor="middle" fill={n.color} fontSize="9" fontFamily="JetBrains Mono, monospace" fontWeight="700">
-              {n.label.toUpperCase()}
-            </text>
-            <text x={n.x + 45} y={n.y + 4} textAnchor="middle" fill="#555555" fontSize="8" fontFamily="Inter, sans-serif">
-              {n.sub}
-            </text>
-          </g>
-        ))}
-
-        {/* Failure injection indicator */}
-        <g>
-          <circle cx="509" cy="80" r="8" fill="#EF4444" opacity="0.9">
-            <animate attributeName="r" values="8;12;8" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.9;0.4;0.9" dur="2s" repeatCount="indefinite" />
-          </circle>
-          <text x="509" y="63" textAnchor="middle" fill="#EF4444" fontSize="8" fontFamily="JetBrains Mono, monospace">CHAOS INJECTED</text>
+    <svg viewBox="0 0 520 180" style={{ width: '100%', maxWidth: 520 }}>
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+          <polygon points="0 0,6 2.5,0 5" fill={failing ? '#EF4444' : '#2D3748'} />
+        </marker>
+      </defs>
+      {/* edges */}
+      {[
+        [80, 90, 200, 50], [80, 90, 200, 130],
+        [260, 50, 380, 70], [260, 130, 380, 110],
+        [440, 90, 440, 90]
+      ].map(([x1, y1, x2, y2], i) => (
+        <line key={i} x1={x1} y1={y1} x2={x2} y2={y2}
+          stroke={failing ? '#EF444440' : `${pathColor}40`} strokeWidth={1.5}
+          markerEnd="url(#arr)"
+        />
+      ))}
+      {/* nodes */}
+      {[
+        { x: 60, y: 90, r: 20, label: 'Gateway', color: failing ? '#EF4444' : '#06B6D4' },
+        { x: 220, y: 50, r: 16, label: 'Order', color: failing ? '#EF4444' : '#10B981' },
+        { x: 220, y: 130, r: 16, label: 'User', color: '#10B981' },
+        { x: 380, y: 70, r: 16, label: 'Payment', color: failing ? '#EF4444' : '#10B981' },
+        { x: 380, y: 110, r: 16, label: 'Billing', color: '#10B981' },
+        { x: 470, y: 90, r: 20, label: 'DB', color: failing ? '#EF4444' : '#3B82F6' },
+      ].map((n, i) => (
+        <g key={i}>
+          <circle cx={n.x} cy={n.y} r={n.r + 6} fill={n.color + '15'} />
+          <circle cx={n.x} cy={n.y} r={n.r} fill={n.color + '22'} stroke={n.color} strokeWidth={1.5} />
+          <text x={n.x} y={n.y + 4} textAnchor="middle"
+            fill={n.color} fontSize={8} fontFamily="JetBrains Mono, monospace"
+          >{n.label}</text>
         </g>
-
-        <text x="420" y="320" textAnchor="middle" fill="#333333" fontSize="9" fontFamily="JetBrains Mono, monospace">
-          ARCHAOS — LIVE SYSTEM TOPOLOGY VISUALIZATION
-        </text>
-      </svg>
-    </div>
-  )
-}
-
-// ─── Simulation Cycle Flow ───────────────────────────────────────────────────
-function SimulationCycleFlow() {
-  const steps = [
-    { num: '01', icon: GitBranch, label: 'MODEL', title: 'Design Topology', desc: 'Drag services, databases, queues, and load balancers onto the interactive canvas. Connect them with HTTP, gRPC, or message queue edges.', color: '#7C3AED' },
-    { num: '02', icon: Wrench, label: 'CONFIGURE', title: 'Tune Parameters', desc: 'Set replica counts, connection pool sizes, timeouts, circuit breaker thresholds, retry policies, and cache TTLs for every node.', color: '#06B6D4' },
-    { num: '03', icon: Flame, label: 'INJECT', title: 'Trigger Chaos', desc: 'Fire load patterns and inject faults — latency spikes, network partitions, CPU pressure, OOM kills, cache expiries, and more.', color: '#EF4444' },
-    { num: '04', icon: Eye, label: 'OBSERVE', title: 'Watch in Real Time', desc: 'See nodes transition from HEALTHY → DEGRADED → FAILED. Traffic dots slow and stop. Metrics charts spike.', color: '#F59E0B' },
-    { num: '05', icon: Brain, label: 'ANALYZE', title: 'AI Narration', desc: 'A streaming AI copilot explains WHY the system failed, what pattern triggered it, and which mitigation strategies apply.', color: '#10B981' },
-  ]
-
-  return (
-    <div className="relative">
-      {/* Connector line */}
-      <div className="hidden md:block absolute top-10 left-[10%] right-[10%] h-px bg-gradient-to-r from-[#7C3AED] via-[#06B6D4] via-[#EF4444] via-[#F59E0B] to-[#10B981] opacity-30" />
-
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-        {steps.map((step, i) => (
-          <FadeIn key={i} delay={i * 100}>
-            <div
-              className="relative bg-[#0A0A0A] rounded-2xl p-6 text-center space-y-3 transition-all duration-300 hover:scale-[1.02] hover:-translate-y-1"
-              style={{ border: `1px solid ${step.color}30` }}
-            >
-              <div className="absolute top-3 right-3 font-mono text-[9px] text-[#333333] font-bold">{step.num}</div>
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center mx-auto"
-                style={{ background: `${step.color}15`, border: `1px solid ${step.color}40` }}
-              >
-                <step.icon size={20} style={{ color: step.color }} />
-              </div>
-              <div className="text-[9px] font-mono font-bold tracking-widest" style={{ color: step.color }}>
-                {step.label}
-              </div>
-              <h4 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                {step.title}
-              </h4>
-              <p className="text-[11px] text-[#666666] leading-relaxed">{step.desc}</p>
-
-              {i < steps.length - 1 && (
-                <div className="hidden md:block absolute -right-3 top-1/2 -translate-y-1/2 z-10">
-                  <ArrowRight size={14} className="text-[#333]" />
-                </div>
-              )}
-            </div>
-          </FadeIn>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// ─── Failure Mode Diagram ────────────────────────────────────────────────────
-function FailureModeDiagram() {
-  return (
-    <div className="w-full overflow-x-auto">
-      <svg viewBox="0 0 760 300" className="w-full max-w-3xl mx-auto" style={{ minWidth: 500 }}>
-        <defs>
-          <marker id="arr2" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-            <polygon points="0 0, 6 2.5, 0 5" fill="#EF4444" />
-          </marker>
-          <marker id="arr3" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
-            <polygon points="0 0, 6 2.5, 0 5" fill="#F59E0B" />
-          </marker>
-        </defs>
-
-        {/* Timeline baseline */}
-        <line x1="40" y1="240" x2="720" y2="240" stroke="#1A1A1A" strokeWidth="1.5" />
-        <text x="40" y="260" fill="#333" fontSize="9" fontFamily="JetBrains Mono, monospace">t=0s</text>
-        <text x="200" y="260" fill="#333" fontSize="9" fontFamily="JetBrains Mono, monospace">t=15s</text>
-        <text x="370" y="260" fill="#333" fontSize="9" fontFamily="JetBrains Mono, monospace">t=30s</text>
-        <text x="530" y="260" fill="#333" fontSize="9" fontFamily="JetBrains Mono, monospace">t=55s</text>
-        <text x="680" y="260" fill="#333" fontSize="9" fontFamily="JetBrains Mono, monospace">t=90s</text>
-
-        {/* Health bars for each service */}
-        {[
-          { y: 30, label: 'API Gateway', bars: [{ x: 40, w: 170, c: '#10B981' }, { x: 210, w: 130, c: '#F59E0B' }, { x: 340, w: 140, c: '#EF4444' }, { x: 480, w: 100, c: '#F59E0B' }, { x: 580, w: 140, c: '#10B981' }] },
-          { y: 80, label: 'Order Svc',   bars: [{ x: 40, w: 170, c: '#10B981' }, { x: 210, w: 80,  c: '#F59E0B' }, { x: 290, w: 180, c: '#EF4444' }, { x: 470, w: 100, c: '#7C3AED' }, { x: 570, w: 150, c: '#10B981' }] },
-          { y: 130, label: 'Payment Svc',bars: [{ x: 40, w: 200, c: '#10B981' }, { x: 240, w: 60,  c: '#F59E0B' }, { x: 300, w: 200, c: '#EF4444' }, { x: 500, w: 90,  c: '#7C3AED' }, { x: 590, w: 130, c: '#10B981' }] },
-          { y: 180, label: 'PostgreSQL', bars: [{ x: 40, w: 220, c: '#10B981' }, { x: 260, w: 40,  c: '#F59E0B' }, { x: 300, w: 240, c: '#EF4444' }, { x: 540, w: 60,  c: '#7C3AED' }, { x: 600, w: 120, c: '#10B981' }] },
-        ].map((row, i) => (
-          <g key={i}>
-            <text x="30" y={row.y + 15} textAnchor="end" fill="#555" fontSize="8" fontFamily="JetBrains Mono, monospace">{row.label}</text>
-            {row.bars.map((b, j) => (
-              <rect key={j} x={b.x} y={row.y} width={b.w} height={18} rx="3" fill={b.c} opacity="0.75" />
-            ))}
-          </g>
-        ))}
-
-        {/* Chaos injection marker */}
-        <line x1="210" y1="15" x2="210" y2="240" stroke="#EF4444" strokeWidth="1" strokeDasharray="4,3" />
-        <text x="214" y="15" fill="#EF4444" fontSize="8" fontFamily="JetBrains Mono, monospace">⚡ CHAOS INJECTED</text>
-
-        {/* Recovery marker */}
-        <line x1="540" y1="15" x2="540" y2="240" stroke="#10B981" strokeWidth="1" strokeDasharray="4,3" />
-        <text x="544" y="15" fill="#10B981" fontSize="8" fontFamily="JetBrains Mono, monospace">✓ RECOVERING</text>
-
-        {/* Legend */}
-        {[{ c: '#10B981', l: 'HEALTHY' }, { c: '#F59E0B', l: 'DEGRADED' }, { c: '#EF4444', l: 'FAILED' }, { c: '#7C3AED', l: 'RECOVERING' }].map((leg, i) => (
-          <g key={i}>
-            <rect x={40 + i * 90} y={275} width={10} height={10} rx="2" fill={leg.c} opacity="0.8" />
-            <text x={56 + i * 90} y={284} fill="#555" fontSize="8" fontFamily="JetBrains Mono, monospace">{leg.l}</text>
-          </g>
-        ))}
-      </svg>
-    </div>
-  )
-}
-
-// ─── Feature deep-dive card ──────────────────────────────────────────────────
-function FeatureCard({ icon: Icon, color, title, badge, bullets }: {
-  icon: React.ElementType; color: string; title: string; badge: string; bullets: string[]
-}) {
-  return (
-    <div
-      className="bg-[#0A0A0A] rounded-2xl p-7 space-y-5 transition-all duration-300 hover:scale-[1.01] hover:-translate-y-1 group"
-      style={{ border: `1px solid #222222` }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '60')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#222222')}
-    >
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-          <Icon size={22} style={{ color }} />
-        </div>
-        <div>
-          <span className="text-[9px] font-mono font-bold tracking-widest px-2 py-0.5 rounded" style={{ background: `${color}15`, color }}>{badge}</span>
-          <h3 className="text-lg font-bold text-white mt-1" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{title}</h3>
-        </div>
-      </div>
-      <ul className="space-y-2.5">
-        {bullets.map((b, i) => (
-          <li key={i} className="flex items-start gap-2.5 text-[12px] text-[#888888] leading-relaxed">
-            <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full flex items-center justify-center" style={{ background: `${color}20` }}>
-              <CheckCircle size={10} style={{ color }} />
-            </span>
-            {b}
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
-
-// ─── Audience card ───────────────────────────────────────────────────────────
-function AudienceCard({ icon: Icon, color, role, tagline, useCases, bestScenarios }: {
-  icon: React.ElementType; color: string; role: string; tagline: string; useCases: string[]; bestScenarios: string[]
-}) {
-  return (
-    <div
-      className="bg-[#0A0A0A] rounded-2xl p-7 space-y-5 h-full transition-all duration-300 hover:-translate-y-1"
-      style={{ border: `1px solid #222` }}
-      onMouseEnter={(e) => (e.currentTarget.style.borderColor = color + '50')}
-      onMouseLeave={(e) => (e.currentTarget.style.borderColor = '#222')}
-    >
-      <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ background: `${color}15`, border: `1px solid ${color}30` }}>
-        <Icon size={22} style={{ color }} />
-      </div>
-      <div>
-        <h3 className="text-xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{role}</h3>
-        <p className="text-sm mt-1" style={{ color }}>{tagline}</p>
-      </div>
-      <div>
-        <p className="text-[10px] font-mono font-bold tracking-widest text-[#444] uppercase mb-2">Use Cases</p>
-        <ul className="space-y-1.5">
-          {useCases.map((u, i) => (
-            <li key={i} className="text-xs text-[#888888] flex items-start gap-2">
-              <ArrowRight size={10} className="mt-0.5 flex-shrink-0" style={{ color }} />
-              {u}
-            </li>
-          ))}
-        </ul>
-      </div>
-      <div>
-        <p className="text-[10px] font-mono font-bold tracking-widest text-[#444] uppercase mb-2">Best Scenarios</p>
-        <div className="flex flex-wrap gap-1.5">
-          {bestScenarios.map((s, i) => (
-            <span key={i} className="text-[10px] px-2 py-0.5 rounded font-mono" style={{ background: `${color}15`, color }}>
-              {s}
-            </span>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ─── Scenario card ────────────────────────────────────────────────────────────
-function ScenarioCard({ tag, difficulty, title, description, onLaunch }: {
-  tag: string; difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
-  title: string; description: string; onLaunch: () => void
-}) {
-  const diffColor = difficulty === 'BEGINNER' ? '#10B981' : difficulty === 'INTERMEDIATE' ? '#F59E0B' : '#EF4444'
-  return (
-    <div
-      onClick={onLaunch}
-      className="bg-[#0A0A0A] border border-[#1E1E1E] hover:border-[#7C3AED] hover:shadow-[0_0_24px_rgba(124,58,237,0.15)] rounded-xl p-6 transition-all duration-300 cursor-pointer flex flex-col gap-3 group"
-    >
-      <div className="flex justify-between items-center">
-        <span className="text-[10px] uppercase font-bold tracking-wider text-[#555555]">{tag}</span>
-        <span className="text-[9px] px-2 py-0.5 rounded font-bold" style={{ background: `${diffColor}15`, color: diffColor, border: `1px solid ${diffColor}30` }}>
-          {difficulty}
-        </span>
-      </div>
-      <h3 className="text-base font-bold text-white group-hover:text-[#A78BFA] transition-colors" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-        {title}
-      </h3>
-      <p className="text-xs text-[#666666] leading-relaxed flex-1">{description}</p>
-      <button className="w-full mt-1 py-2 bg-transparent hover:bg-[#7C3AED] border border-[#222] group-hover:border-[#7C3AED] text-xs text-[#888] group-hover:text-white rounded-lg transition-all font-semibold flex items-center justify-center gap-1.5">
-        <Play size={11} className="group-hover:fill-white transition-all" /> Launch Scenario
-      </button>
-    </div>
-  )
-}
-
-// ─── Metric comparison table ──────────────────────────────────────────────────
-function ComparisonTable() {
-  const rows = [
-    { feature: 'Visual drag-and-drop canvas',     archaos: true,  other1: false, other2: false },
-    { feature: 'Real-time traffic animation',      archaos: true,  other1: false, other2: true  },
-    { feature: 'AI-narrated failure explanation',  archaos: true,  other1: false, other2: false },
-    { feature: 'Guided walkthrough scenarios',     archaos: true,  other1: false, other2: false },
-    { feature: 'Circuit breaker simulation',       archaos: true,  other1: true,  other2: false },
-    { feature: 'Message queue flood scenario',     archaos: true,  other1: true,  other2: false },
-    { feature: 'No cloud credentials required',   archaos: true,  other1: false, other2: true  },
-    { feature: 'Interactive quiz checkpoints',     archaos: true,  other1: false, other2: false },
-    { feature: 'Free in-browser simulator',        archaos: true,  other1: false, other2: true  },
-  ]
-
-  return (
-    <div className="w-full overflow-x-auto">
-      <table className="w-full text-xs border-collapse" style={{ minWidth: 500 }}>
-        <thead>
-          <tr>
-            <th className="text-left p-4 text-[#444] font-mono text-[10px] tracking-widest uppercase border-b border-[#1A1A1A]">Feature</th>
-            <th className="p-4 border-b border-[#7C3AED] font-bold text-white" style={{ background: '#7C3AED15' }}>
-              <span className="text-[#A78BFA] font-mono tracking-widest text-[10px]">ARCHAOS</span>
-            </th>
-            <th className="p-4 border-b border-[#222] text-[#444] font-mono text-[10px] tracking-widest uppercase">Chaos Monkey</th>
-            <th className="p-4 border-b border-[#222] text-[#444] font-mono text-[10px] tracking-widest uppercase">Gremlin</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, i) => (
-            <tr key={i} className="border-b border-[#0F0F0F] hover:bg-[#0A0A0A] transition-colors">
-              <td className="p-4 text-[#888]">{row.feature}</td>
-              <td className="p-4 text-center" style={{ background: '#7C3AED08' }}>
-                {row.archaos ? <CheckCircle size={14} className="mx-auto text-[#7C3AED]" /> : <span className="text-[#333]">—</span>}
-              </td>
-              <td className="p-4 text-center">
-                {row.other1 ? <CheckCircle size={14} className="mx-auto text-[#444]" /> : <span className="text-[#222]">—</span>}
-              </td>
-              <td className="p-4 text-center">
-                {row.other2 ? <CheckCircle size={14} className="mx-auto text-[#444]" /> : <span className="text-[#222]">—</span>}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
-
-// ─── FAQ Item ────────────────────────────────────────────────────────────────
-function FAQItem({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="border-b border-[#111111] last:border-0">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full text-left py-5 flex items-start justify-between gap-4 cursor-pointer group"
-      >
-        <span className="text-sm font-semibold text-white group-hover:text-[#A78BFA] transition-colors">{q}</span>
-        <span className="flex-shrink-0 mt-0.5 transition-transform duration-300" style={{ transform: open ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-          <ChevronRight size={16} className="text-[#444]" />
-        </span>
-      </button>
-      {open && (
-        <div className="pb-5 text-sm text-[#666666] leading-relaxed animate-fade-in">
-          {a}
-        </div>
+      ))}
+      {/* animated particles */}
+      {!failing && [
+        "M 80 90 L 200 50", "M 80 90 L 200 130",
+        "M 220 50 L 380 70", "M 220 130 L 380 110",
+        "M 380 70 L 470 90", "M 380 110 L 470 90",
+      ].map((d, i) => (
+        <circle key={i} r={3} fill="#6366F1" opacity={0.8}>
+          <animateMotion dur={`${1.5 + i * 0.3}s`} repeatCount="indefinite" path={d} />
+        </circle>
+      ))}
+      {failing && (
+        <text x={260} y={170} textAnchor="middle"
+          fill="#EF4444" fontSize={9} fontFamily="JetBrains Mono, monospace"
+        >CASCADE FAILURE — ALL SERVICES DEGRADED</text>
       )}
+    </svg>
+  )
+}
+
+// ─── CASCADE TIMELINE SVG ─────────────────────────────────────────────────────
+function CascadeTimeline() {
+  const services = [
+    { label: 'PostgreSQL DB', events: [{ x: 40, w: 160, c: '#10B981' }, { x: 200, w: 50, c: '#F59E0B' }, { x: 250, w: 200, c: '#EF4444' }, { x: 450, w: 50, c: '#6366F1' }, { x: 500, w: 120, c: '#10B981' }] },
+    { label: 'Payment Svc', events: [{ x: 40, w: 200, c: '#10B981' }, { x: 240, w: 30, c: '#F59E0B' }, { x: 270, w: 180, c: '#EF4444' }, { x: 450, w: 50, c: '#6366F1' }, { x: 500, w: 120, c: '#10B981' }] },
+    { label: 'Billing Svc', events: [{ x: 40, w: 230, c: '#10B981' }, { x: 270, w: 30, c: '#F59E0B' }, { x: 300, w: 150, c: '#EF4444' }, { x: 450, w: 50, c: '#6366F1' }, { x: 500, w: 120, c: '#10B981' }] },
+    { label: 'Order Svc', events: [{ x: 40, w: 270, c: '#10B981' }, { x: 310, w: 30, c: '#F59E0B' }, { x: 340, w: 110, c: '#EF4444' }, { x: 450, w: 50, c: '#6366F1' }, { x: 500, w: 120, c: '#10B981' }] },
+    { label: 'API Gateway', events: [{ x: 40, w: 320, c: '#10B981' }, { x: 360, w: 30, c: '#F59E0B' }, { x: 390, w: 60, c: '#EF4444' }, { x: 450, w: 50, c: '#6366F1' }, { x: 500, w: 120, c: '#10B981' }] },
+  ]
+  const rowH = 34, top = 20
+  return (
+    <svg viewBox="0 0 700 250" style={{ width: '100%' }}>
+      {/* time axis */}
+      <line x1={40} y1={220} x2={680} y2={220} stroke="#1E2530" strokeWidth={1} />
+      {['t=0s', 't=15s', 't=30s', 't=60s', 't=90s'].map((t, i) => (
+        <text key={i} x={40 + i * 160} y={235}
+          fill="#4A5568" fontSize={8} fontFamily="JetBrains Mono,monospace">{t}</text>
+      ))}
+      {/* chaos line */}
+      <line x1={200} y1={10} x2={200} y2={215} stroke="#EF4444" strokeWidth={1} strokeDasharray="4,3" />
+      <text x={203} y={18} fill="#EF4444" fontSize={7.5} fontFamily="JetBrains Mono,monospace">⚡ CHAOS</text>
+      {/* recovery line */}
+      <line x1={450} y1={10} x2={450} y2={215} stroke="#10B981" strokeWidth={1} strokeDasharray="4,3" />
+      <text x={453} y={18} fill="#10B981" fontSize={7.5} fontFamily="JetBrains Mono,monospace">✓ RECOVER</text>
+      {/* rows */}
+      {services.map((s, i) => (
+        <g key={i}>
+          <text x={30} y={top + i * rowH + 14} textAnchor="end"
+            fill="#8B95A3" fontSize={8} fontFamily="JetBrains Mono,monospace">{s.label}</text>
+          {s.events.map((e, j) => (
+            <rect key={j} x={e.x} y={top + i * rowH} width={e.w} height={18}
+              rx={3} fill={e.c} opacity={0.75} />
+          ))}
+        </g>
+      ))}
+      {/* legend */}
+      {[['#10B981', 'HEALTHY'], ['#F59E0B', 'DEGRADED'], ['#EF4444', 'FAILED'], ['#6366F1', 'RECOVERING']].map(([c, l], i) => (
+        <g key={i}>
+          <rect x={40 + i * 130} y={242} width={10} height={8} rx={2} fill={c} opacity={0.8} />
+          <text x={55 + i * 130} y={249} fill="#4A5568" fontSize={8} fontFamily="JetBrains Mono,monospace">{l}</text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+// ─── SYSTEM ARCHITECTURE DIAGRAM ──────────────────────────────────────────────
+function SystemArchDiagram() {
+  return (
+    <svg viewBox="0 0 760 360" style={{ width: '100%', maxWidth: 760 }}>
+      <defs>
+        <marker id="a2" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+          <polygon points="0 0,6 2.5,0 5" fill="#2D3748" />
+        </marker>
+        <marker id="a3" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+          <polygon points="0 0,6 2.5,0 5" fill="#6366F1" />
+        </marker>
+      </defs>
+
+      {/* Browser box */}
+      <rect x={10} y={40} width={160} height={280} rx={10}
+        fill="#0E111740" stroke="#1E2530" strokeWidth={1} />
+      <text x={90} y={60} textAnchor="middle" fill="#4A5568"
+        fontSize={8} fontFamily="JetBrains Mono,monospace">BROWSER</text>
+
+      {/* React Flow Canvas */}
+      <rect x={20} y={70} width={140} height={55} rx={6}
+        fill="#6366F115" stroke="#6366F1" strokeWidth={1} />
+      <text x={90} y={92} textAnchor="middle" fill="#6366F1" fontSize={9} fontFamily="JetBrains Mono,monospace">React Flow</text>
+      <text x={90} y={107} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">Canvas (60fps)</text>
+
+      {/* Web Worker */}
+      <rect x={20} y={140} width={140} height={55} rx={6}
+        fill="#10B98115" stroke="#10B981" strokeWidth={1} />
+      <text x={90} y={162} textAnchor="middle" fill="#10B981" fontSize={9} fontFamily="JetBrains Mono,monospace">Web Worker</text>
+      <text x={90} y={177} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">Simulation Engine</text>
+
+      {/* Socket.IO */}
+      <rect x={20} y={210} width={140} height={55} rx={6}
+        fill="#F59E0B15" stroke="#F59E0B" strokeWidth={1} />
+      <text x={90} y={232} textAnchor="middle" fill="#F59E0B" fontSize={9} fontFamily="JetBrains Mono,monospace">Socket.IO</text>
+      <text x={90} y={247} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">Real-time narration</text>
+
+      {/* postMessage arrow between React Flow and Web Worker */}
+      <line x1={90} y1={125} x2={90} y2={140} stroke="#6366F1" strokeWidth={1} markerEnd="url(#a3)" />
+      <text x={93} y={135} fill="#6366F1" fontSize={7} fontFamily="JetBrains Mono,monospace">postMessage</text>
+
+      {/* Auth Store */}
+      <rect x={20} y={280} width={140} height={32} rx={6}
+        fill="#7C3AED15" stroke="#7C3AED" strokeWidth={1} />
+      <text x={90} y={301} textAnchor="middle" fill="#7C3AED" fontSize={8} fontFamily="JetBrains Mono,monospace">Zustand Stores</text>
+
+      {/* Arrow to backend */}
+      <line x1={160} y1={237} x2={240} y2={200} stroke="#F59E0B" strokeWidth={1.5}
+        strokeDasharray="5,3" markerEnd="url(#a2)" />
+      <text x={185} y={212} fill="#F59E0B" fontSize={7} fontFamily="JetBrains Mono,monospace">WSS</text>
+
+      {/* Railway/Backend box */}
+      <rect x={240} y={40} width={200} height={280} rx={10}
+        fill="#0E111740" stroke="#1E2530" strokeWidth={1} />
+      <text x={340} y={60} textAnchor="middle" fill="#4A5568"
+        fontSize={8} fontFamily="JetBrains Mono,monospace">RAILWAY BACKEND</text>
+
+      {/* NestJS */}
+      <rect x={252} y={70} width={176} height={50} rx={6}
+        fill="#EF444415" stroke="#EF4444" strokeWidth={1} />
+      <text x={340} y={92} textAnchor="middle" fill="#EF4444" fontSize={9} fontFamily="JetBrains Mono,monospace">NestJS API</text>
+      <text x={340} y={107} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">REST + Socket.IO Gateway</text>
+
+      {/* Narration Gateway */}
+      <rect x={252} y={135} width={176} height={50} rx={6}
+        fill="#06B6D415" stroke="#06B6D4" strokeWidth={1} />
+      <text x={340} y={157} textAnchor="middle" fill="#06B6D4" fontSize={9} fontFamily="JetBrains Mono,monospace">NarrationGateway</text>
+      <text x={340} y={172} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">GPT-OSS-120B streaming</text>
+
+      {/* Blast Service */}
+      <rect x={252} y={200} width={176} height={50} rx={6}
+        fill="#7C3AED15" stroke="#7C3AED" strokeWidth={1} />
+      <text x={340} y={222} textAnchor="middle" fill="#7C3AED" fontSize={9} fontFamily="JetBrains Mono,monospace">BlastService</text>
+      <text x={340} y={237} textAnchor="middle" fill="#8B95A3" fontSize={8} fontFamily="DM Sans,sans-serif">BFS graph traversal</text>
+
+      {/* PostgreSQL */}
+      <rect x={252} y={265} width={80} height={40} rx={6}
+        fill="#3B82F615" stroke="#3B82F6" strokeWidth={1} />
+      <text x={292} y={283} textAnchor="middle" fill="#3B82F6" fontSize={8} fontFamily="JetBrains Mono,monospace">PostgreSQL</text>
+      <text x={292} y={296} textAnchor="middle" fill="#8B95A3" fontSize={7} fontFamily="DM Sans,sans-serif">Topology store</text>
+
+      {/* Redis */}
+      <rect x={346} y={265} width={82} height={40} rx={6}
+        fill="#EF444415" stroke="#EF4444" strokeWidth={1} />
+      <text x={387} y={283} textAnchor="middle" fill="#EF4444" fontSize={8} fontFamily="JetBrains Mono,monospace">Redis</text>
+      <text x={387} y={296} textAnchor="middle" fill="#8B95A3" fontSize={7} fontFamily="DM Sans,sans-serif">Session cache</text>
+
+      {/* Internal arrows in backend */}
+      <line x1={340} y1={120} x2={340} y2={135} stroke="#2D3748" strokeWidth={1} markerEnd="url(#a2)" />
+      <line x1={340} y1={185} x2={340} y2={200} stroke="#2D3748" strokeWidth={1} markerEnd="url(#a2)" />
+      <line x1={340} y1={250} x2={340} y2={265} stroke="#2D3748" strokeWidth={1} markerEnd="url(#a2)" />
+
+      {/* Arrow to OpenRouter */}
+      <line x1={428} y1={160} x2={490} y2={160} stroke="#06B6D4" strokeWidth={1.5}
+        strokeDasharray="5,3" markerEnd="url(#a2)" />
+      <text x={432} y={153} fill="#06B6D4" fontSize={7} fontFamily="JetBrains Mono,monospace">HTTPS</text>
+
+      {/* OpenRouter box */}
+      <rect x={490} y={80} width={160} height={200} rx={10}
+        fill="#0E111740" stroke="#1E2530" strokeWidth={1} />
+      <text x={570} y={100} textAnchor="middle" fill="#4A5568"
+        fontSize={8} fontFamily="JetBrains Mono,monospace">OPENROUTER</text>
+
+      <rect x={502} y={110} width={136} height={50} rx={6}
+        fill="#06B6D415" stroke="#06B6D4" strokeWidth={1} />
+      <text x={570} y={132} textAnchor="middle" fill="#06B6D4" fontSize={9} fontFamily="JetBrains Mono,monospace">GPT-OSS-120B</text>
+      <text x={570} y={147} textAnchor="middle" fill="#8B95A3" fontSize={8}>Primary model</text>
+
+      <rect x={502} y={175} width={136} height={50} rx={6}
+        fill="#F59E0B15" stroke="#F59E0B" strokeWidth={1} />
+      <text x={570} y={197} textAnchor="middle" fill="#F59E0B" fontSize={9} fontFamily="JetBrains Mono,monospace">Kimi K2.6</text>
+      <text x={570} y={212} textAnchor="middle" fill="#8B95A3" fontSize={8}>Fallback (5s timeout)</text>
+
+      {/* labels */}
+      <text x={570} y={250} textAnchor="middle" fill="#4A5568" fontSize={7.5} fontFamily="JetBrains Mono,monospace">stream: true</text>
+      <text x={570} y={263} textAnchor="middle" fill="#4A5568" fontSize={7.5} fontFamily="JetBrains Mono,monospace">token-by-token response</text>
+
+      {/* user icon */}
+      <circle cx={700} cy={100} r={18} fill="#1E253080" stroke="#2D3748" strokeWidth={1} />
+      <text x={700} y={105} textAnchor="middle" fill="#8B95A3" fontSize={14}>👤</text>
+      <text x={700} y={128} textAnchor="middle" fill="#4A5568" fontSize={7.5} fontFamily="JetBrains Mono,monospace">Engineer</text>
+      <line x1={682} y1={100} x2={650} y2={100} stroke="#2D3748" strokeWidth={1} markerEnd="url(#a2)" />
+    </svg>
+  )
+}
+
+// ─── STATE MACHINE SVG ────────────────────────────────────────────────────────
+function StateMachineSVG() {
+  const states = [
+    { id: 'H', label: 'HEALTHY', x: 100, y: 120, color: '#10B981' },
+    { id: 'D', label: 'DEGRADED', x: 280, y: 60, color: '#F59E0B' },
+    { id: 'U', label: 'UNHEALTHY', x: 280, y: 180, color: '#F97316' },
+    { id: 'F', label: 'FAILED', x: 460, y: 120, color: '#EF4444' },
+    { id: 'R', label: 'RECOVERING', x: 280, y: 300, color: '#6366F1' },
+  ]
+  const transitions = [
+    { from: [100, 120], to: [280, 60], label: 'CPU>75%', color: '#F59E0B' },
+    { from: [280, 60], to: [280, 180], label: 'err>10%', color: '#F97316' },
+    { from: [280, 180], to: [460, 120], label: 'err>50%', color: '#EF4444' },
+    { from: [460, 120], to: [280, 300], label: 'recover', color: '#6366F1' },
+    { from: [280, 300], to: [100, 120], label: 'clean', color: '#10B981' },
+  ]
+  return (
+    <svg viewBox="0 0 580 380" style={{ width: '100%', maxWidth: 580 }}>
+      <defs>
+        <marker id="sm" markerWidth="6" markerHeight="5" refX="5" refY="2.5" orient="auto">
+          <polygon points="0 0,6 2.5,0 5" fill="#2D3748" />
+        </marker>
+      </defs>
+      {transitions.map((t, i) => (
+        <g key={i}>
+          <line x1={t.from[0]} y1={t.from[1]} x2={t.to[0]} y2={t.to[1]}
+            stroke={t.color} strokeWidth={1.5} opacity={0.5}
+            markerEnd="url(#sm)" />
+          <text
+            x={(t.from[0] + t.to[0]) / 2 + 8}
+            y={(t.from[1] + t.to[1]) / 2}
+            fill={t.color} fontSize={8} fontFamily="JetBrains Mono,monospace"
+          >{t.label}</text>
+        </g>
+      ))}
+      {states.map(s => (
+        <g key={s.id}>
+          <circle cx={s.x} cy={s.y} r={36} fill={s.color + '18'} stroke={s.color} strokeWidth={1.5}>
+            <animate attributeName="opacity" values="0.7;1;0.7" dur={`${2 + states.indexOf(s) * 0.4}s`} repeatCount="indefinite" />
+          </circle>
+          <text x={s.x} y={s.y - 4} textAnchor="middle"
+            fill={s.color} fontSize={10} fontFamily="JetBrains Mono,monospace" fontWeight="700">{s.id}</text>
+          <text x={s.x} y={s.y + 12} textAnchor="middle"
+            fill={s.color} fontSize={7} fontFamily="JetBrains Mono,monospace">{s.label}</text>
+        </g>
+      ))}
+    </svg>
+  )
+}
+
+// ─── LEARNING PATH ────────────────────────────────────────────────────────────
+function LearningPath() {
+  const steps = [
+    { num: '01', color: '#10B981', title: 'The Cascade', time: '~10min', level: 'BEGINNER', desc: 'Start here. Database latency cascades through 6 services. The most important pattern.' },
+    { num: '02', color: '#10B981', title: 'Graceful Degradation', time: '~10min', level: 'BEGINNER', desc: 'Same topology. Circuit breakers enabled. System survives the identical failure.' },
+    { num: '03', color: '#F59E0B', title: 'Retry Storm', time: '~12min', level: 'INTERMEDIATE', desc: 'Fixed retries amplify a struggling service 4x. Why backoff + jitter are non-negotiable.' },
+    { num: '04', color: '#F59E0B', title: 'Thundering Herd', time: '~12min', level: 'INTERMEDIATE', desc: 'Cache miss stampede exhausts the database connection pool in seconds.' },
+    { num: '05', color: '#F59E0B', title: 'Queue Flood', time: '~15min', level: 'INTERMEDIATE', desc: 'Dead consumer fills Kafka. Producers block. Backpressure made visible.' },
+    { num: '06', color: '#F97316', title: 'Memory Leak', time: '~12min', level: 'INTERMEDIATE', desc: 'Sawtooth OOM crash cycles. Why heap profiling is critical in Node.js services.' },
+    { num: '07', color: '#EF4444', title: 'Traffic Spike', time: '~15min', level: 'ADVANCED', desc: '10x RPS. What fails first depends entirely on your configuration choices.' },
+    { num: '08', color: '#EF4444', title: 'Split Brain', time: '~18min', level: 'ADVANCED', desc: 'Network partition. Two databases diverge. CAP Theorem: not a theorem, an event.' },
+  ]
+  return (
+    <div style={{ position: 'relative' }}>
+      <div style={{
+        position: 'absolute', left: 20, top: 30, bottom: 30,
+        width: 2, background: 'linear-gradient(to bottom, var(--green), var(--red))',
+        opacity: 0.3
+      }} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        {steps.map((s, i) => (
+          <FadeUp key={i} delay={i * 50}>
+            <div style={{
+              display: 'flex', gap: 24, alignItems: 'flex-start', paddingLeft: 48, position: 'relative'
+            }}>
+              <div style={{
+                position: 'absolute', left: 8, top: 14, width: 26, height: 26,
+                borderRadius: '50%', background: s.color + '22',
+                border: `1.5px solid ${s.color}`, display: 'flex',
+                alignItems: 'center', justifyContent: 'center'
+              }}>
+                <span className="font-mono" style={{ fontSize: 9, color: s.color }}>{s.num}</span>
+              </div>
+              <div style={{
+                flex: 1, background: 'var(--bg2)',
+                border: '1px solid var(--border)',
+                borderRadius: 10, padding: '14px 18px',
+                display: 'flex', gap: 16, alignItems: 'flex-start'
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span className="font-mono" style={{
+                      fontSize: 8, padding: '2px 6px', borderRadius: 4,
+                      background: s.color + '15', color: s.color,
+                      border: `1px solid ${s.color}30`
+                    }}>{s.level}</span>
+                    <span className="font-mono" style={{ fontSize: 8, color: 'var(--text3)' }}>{s.time}</span>
+                  </div>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text1)', marginBottom: 4 }}>{s.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{s.desc}</div>
+                </div>
+                <div style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: s.color, flexShrink: 0, marginTop: 6
+                }} />
+              </div>
+            </div>
+          </FadeUp>
+        ))}
+      </div>
     </div>
   )
 }
 
-// ─── MAIN LANDING COMPONENT ───────────────────────────────────────────────────
+// ─── TICKER ───────────────────────────────────────────────────────────────────
+function Ticker() {
+  const items = [
+    '⚡ CASCADE FAILURE', '✓ CIRCUIT BREAKER', '⚠ RETRY STORM',
+    '⚡ THUNDERING HERD', '✓ GRACEFUL DEGRADE', '⚠ SPLIT BRAIN',
+    '⚡ QUEUE FLOOD', '✓ RECOVERING', '⚠ MEMORY LEAK',
+    '⚡ TRAFFIC SPIKE', '✓ BACKPRESSURE', '⚠ CONNECTION POOL',
+  ]
+  const str = items.join('   ·   ')
+  return (
+    <div className="ticker-wrap" style={{
+      background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+      borderBottom: '1px solid var(--border)', padding: '10px 0'
+    }}>
+      <div className="ticker-inner font-mono" style={{ fontSize: 10, color: 'var(--text3)' }}>
+        {str}&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;{str}
+      </div>
+    </div>
+  )
+}
+
+// ─── MAIN ─────────────────────────────────────────────────────────────────────
 export function Landing() {
-  const navigate = useNavigate()
+  const nav = useNavigate()
 
   return (
-    <div
-      className="bg-black text-white min-h-screen flex flex-col relative overflow-x-hidden"
-      style={{ fontFamily: 'Inter, sans-serif' }}
-    >
+    <div style={{ background: 'var(--bg)', color: 'var(--text1)', minHeight: '100vh', overflowX: 'hidden' }}>
+      <style>{CSS}</style>
 
-      {/* ══ FIXED NAVBAR ══ */}
-      <nav className="fixed top-0 left-0 right-0 h-[60px] bg-black/85 backdrop-blur-[16px] border-b border-[#111] z-[1000] px-6 flex items-center justify-between">
-        <Link to="/" className="font-bold tracking-[3px] text-white text-lg" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
+      {/* ══ NAVBAR ══ */}
+      <nav style={{
+        position: 'fixed', top: 0, left: 0, right: 0, height: 60,
+        background: '#080B0FEE', borderBottom: '1px solid var(--border)',
+        zIndex: 1000, padding: '0 24px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+      }}>
+        <Link to="/" className="font-display" style={{ fontSize: 22, color: 'var(--text1)', letterSpacing: 3 }}>
           ARCHAOS
         </Link>
-        <div className="flex items-center gap-6 text-sm">
-          <a href="#how-it-works" className="text-[#666] hover:text-white transition-colors hidden sm:block">How It Works</a>
-          <a href="#features" className="text-[#666] hover:text-white transition-colors hidden sm:block">Features</a>
-          <a href="#scenarios" className="text-[#666] hover:text-white transition-colors hidden sm:block">Scenarios</a>
-          <Link to="/editor" className="text-[#666] hover:text-white transition-colors">Playground</Link>
-          <Link
-            to="/auth"
-            state={{ mode: 'register' }}
-            className="px-5 py-1.5 text-xs bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-bold rounded-lg hover:opacity-85 active:scale-[0.98] transition-all"
-          >
-            Sign Up Free
-          </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24, fontSize: 13 }}>
+          {[['#how-it-works', 'How It Works'], ['#scenarios', 'Scenarios'], ['#for-whom', 'For Whom']].map(([h, l]) => (
+            <a key={h} href={h} style={{ color: 'var(--text3)', transition: 'color 0.2s' }}
+              onMouseEnter={e => (e.currentTarget.style.color = 'var(--text1)')}
+              onMouseLeave={e => (e.currentTarget.style.color = 'var(--text3)')}
+              className="hidden sm:block"
+            >{l}</a>
+          ))}
+          <Link to="/editor" style={{
+            padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+            background: 'var(--indigo)', color: '#fff', transition: 'opacity 0.2s'
+          }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          >Open Playground →</Link>
         </div>
       </nav>
 
       {/* ══ HERO ══ */}
-      <section className="relative h-screen w-full flex flex-col items-center justify-center px-6 text-center z-10 overflow-hidden">
+      <section style={{
+        position: 'relative', height: '100vh', minHeight: 600,
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        textAlign: 'center', padding: '0 24px', overflow: 'hidden'
+      }}>
         <HeroCanvas />
-        <div className="relative z-10 max-w-5xl mx-auto space-y-7">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#7C3AED]/10 border border-[#7C3AED]/30 text-xs font-semibold text-[#A78BFA] tracking-wide">
-            <Zap size={11} />
-            Chaos Engineering · Visual Simulation · AI Narration
+        <div className="scanline" />
+        <div style={{ position: 'relative', zIndex: 10, maxWidth: 860 }}>
+          {/* pill */}
+          <div className="font-mono" style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '6px 14px', borderRadius: 20, fontSize: 11,
+            background: 'var(--indigo)15', border: '1px solid var(--indigo)40',
+            color: 'var(--indigo)', marginBottom: 24, letterSpacing: 2
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: 'var(--green)', display: 'inline-block',
+              animation: 'pulse-ring 2s ease-out infinite'
+            }} />
+            LIVE SIMULATION RUNNING — WATCH THE CASCADE
           </div>
-          <h1
-            className="text-5xl md:text-[72px] font-extrabold leading-[1.04] tracking-tight"
-            style={{ fontFamily: 'Space Grotesk, sans-serif' }}
-          >
+
+          {/* headline */}
+          <h1 className="font-display" style={{
+            fontSize: 'clamp(60px, 10vw, 130px)',
+            lineHeight: 0.95, color: 'var(--text1)',
+            marginBottom: 16
+          }}>
             Watch your<br />
-            <span className="bg-gradient-to-r from-[#7C3AED] via-[#A78BFA] to-[#06B6D4] bg-clip-text text-transparent">
-              architecture fail.
-            </span>
-            <br />Safely.
+            <span className="cascade-text">architecture fail.</span><br />
+            Safely.
           </h1>
-          <p className="text-lg md:text-xl text-[#777] font-light max-w-2xl mx-auto leading-relaxed">
-            Archaos is an interactive visual simulator for distributed system failures.
-            Build any topology, inject chaos, watch cascades unfold in real time,
-            and let AI explain exactly why your system broke.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-            <button
-              onClick={() => navigate('/editor')}
-              className="px-8 py-4 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-bold rounded-xl flex items-center gap-2 shadow-xl shadow-[#7C3AED]/25 hover:opacity-90 active:scale-[0.98] transition-all text-sm"
-            >
-              <Play size={14} className="fill-white" />
-              Start Simulating — Free
-            </button>
-            <a
-              href="#what-is-archaos"
-              className="px-8 py-4 border border-[#222] hover:border-[#888] text-[#888] hover:text-white font-semibold rounded-xl transition-all text-sm flex items-center gap-2"
-            >
-              <BookOpen size={14} /> Learn More <ChevronRight size={14} />
-            </a>
+
+          {/* typing sub */}
+          <div style={{ fontSize: 18, color: 'var(--text2)', marginBottom: 36, minHeight: 30 }}>
+            <TypingText phrases={[
+              'Simulate cascading failures without touching production',
+              'Understand circuit breakers through direct experience',
+              'Build the mental images senior engineers have from incidents',
+              'See CAP theorem play out in real time on your canvas',
+            ]} />
           </div>
-          <div className="flex items-center justify-center gap-8 pt-4 text-xs text-[#444]">
-            <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> No signup required to try</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> Runs entirely in browser</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> AI-powered explanations</span>
+
+          {/* CTAs */}
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => nav('/learn/the-cascade')} className="cta-btn"
+              style={{
+                padding: '16px 32px', borderRadius: 10, fontSize: 14, fontWeight: 700,
+                background: 'var(--indigo)', color: '#fff', cursor: 'pointer',
+                border: 'none', display: 'flex', alignItems: 'center', gap: 8,
+                boxShadow: '0 0 40px rgba(99,102,241,0.3)', transition: 'transform 0.2s, box-shadow 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 60px rgba(99,102,241,0.4)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 40px rgba(99,102,241,0.3)' }}
+            >
+              <Play size={14} style={{ fill: '#fff' }} />
+              Run The Cascade — Free
+            </button>
+            <button onClick={() => nav('/editor')} className="cta-btn"
+              style={{
+                padding: '16px 32px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+                background: 'transparent', color: 'var(--text2)', cursor: 'pointer',
+                border: '1px solid var(--border2)', transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text2)'; e.currentTarget.style.color = 'var(--text1)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Terminal size={14} /> Open Playground
+              </span>
+            </button>
+          </div>
+
+          {/* trust strip */}
+          <div style={{
+            display: 'flex', gap: 24, justifyContent: 'center', marginTop: 40,
+            flexWrap: 'wrap', fontSize: 12
+          }}>
+            {[
+              ['✓', 'No signup to try'], ['✓', 'Runs in browser'],
+              ['✓', '8 guided scenarios'], ['✓', 'AI narration included'],
+            ].map(([icon, label], i) => (
+              <span key={i} style={{ color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ color: 'var(--green)' }}>{icon}</span> {label}
+              </span>
+            ))}
           </div>
         </div>
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[#333] animate-bounce">
-          <span className="text-xs font-mono tracking-widest">SCROLL TO EXPLORE</span>
-          <div className="w-px h-8 bg-gradient-to-b from-[#333] to-transparent" />
+
+        {/* scroll indicator */}
+        <div style={{
+          position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)',
+          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6
+        }}>
+          <span className="font-mono" style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: 3 }}>SCROLL</span>
+          <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, var(--text3), transparent)' }} />
         </div>
       </section>
 
-      {/* ══ SECTION 1: WHAT IS ARCHAOS ══ */}
-      <section id="what-is-archaos" className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <SectionPill icon={HelpCircle} label="What is Archaos?" color="#7C3AED" />
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
-            <div className="space-y-6">
-              <h2 className="text-4xl md:text-5xl font-extrabold leading-tight" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                An Interactive Playground for<br />
-                <span className="text-[#7C3AED]">Distributed Systems</span> Failure
-              </h2>
-              <p className="text-[15px] text-[#777] leading-relaxed">
-                Modern software is built from dozens of services talking to each other over networks. Databases go slow. Queues fill up. Retries amplify load. Connection pools exhaust. Most developers have never <em>seen</em> these failures because they are incredibly hard to reproduce on a laptop or staging environment.
-              </p>
-              <p className="text-[15px] text-[#777] leading-relaxed">
-                <strong className="text-white">Archaos</strong> solves this by giving you a visual, drag-and-drop simulation canvas. You build a topology — services, databases, caches, load balancers, message queues — connect them with edges, tune parameters, and then inject chaos. The simulation runs in a Web Worker in real time, giving you metrics, animated traffic, and an AI narration that explains the root cause as it happens.
-              </p>
-              <p className="text-[15px] text-[#777] leading-relaxed">
-                Think of it as a <strong className="text-white">flight simulator for distributed systems</strong> — you experience real failure scenarios and learn how to build resilient architectures, without touching production.
-              </p>
+      {/* ══ TICKER ══ */}
+      <Ticker />
 
-              <div className="grid grid-cols-2 gap-4 pt-2">
+      {/* ══ STATS ══ */}
+      <section style={{ background: 'var(--bg2)', borderBottom: '1px solid var(--border)', padding: '40px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px,1fr))', gap: 32, textAlign: 'center' }}>
+          {[
+            { n: 8, s: '', label: 'Failure Scenarios' },
+            { n: 60, s: 'fps', label: 'Canvas Rendering' },
+            { n: 7, s: '', label: 'Node Types' },
+            { n: 10, s: 'Hz', label: 'Simulation Rate' },
+            { n: 5, s: '', label: 'Health States' },
+            { n: 120, s: 'B', label: 'GPT Parameters' },
+          ].map((s, i) => (
+            <FadeUp key={i} delay={i * 60}>
+              <div className="font-display" style={{ fontSize: 48, color: 'var(--text1)', lineHeight: 1 }}>
+                <AnimatedNumber target={s.n} suffix={s.s} />
+              </div>
+              <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 2, marginTop: 8 }}>
+                {s.label.toUpperCase()}
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      {/* ══ THE PROBLEM ══ */}
+      <section style={{ padding: '96px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <FadeUp>
+          <SectionHeader
+            pill="The Problem"
+            title={<>Distributed systems knowledge<br />is locked behind production incidents</>}
+            sub="Senior engineers know things students don't. Not because the concepts are secret — but because they've lived through failures that create visceral, unforgeatable memories."
+          />
+        </FadeUp>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32, marginBottom: 64 }}>
+          {/* Before */}
+          <FadeUp delay={100}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid #EF444430',
+              borderRadius: 12, padding: 32
+            }}>
+              <div className="font-mono" style={{ fontSize: 11, color: '#EF4444', letterSpacing: 3, marginBottom: 16 }}>
+                BEFORE ARCHAOS
+              </div>
+              {[
+                'You read about cascading failures in a blog post',
+                'You understand CAP theorem as a theoretical concept',
+                'You add circuit breakers because someone told you to',
+                'You fear distributed systems incidents you\'ve never seen',
+                'System design interviews feel abstract and disconnected',
+              ].map((t, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 10, marginBottom: 12,
+                  fontSize: 13, color: 'var(--text2)', alignItems: 'flex-start'
+                }}>
+                  <span style={{ color: '#EF4444', marginTop: 2, flexShrink: 0 }}>✕</span>
+                  {t}
+                </div>
+              ))}
+            </div>
+          </FadeUp>
+
+          {/* After */}
+          <FadeUp delay={180}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid #10B98130',
+              borderRadius: 12, padding: 32
+            }}>
+              <div className="font-mono" style={{ fontSize: 11, color: 'var(--green)', letterSpacing: 3, marginBottom: 16 }}>
+                AFTER ARCHAOS
+              </div>
+              {[
+                'You watched a cascade kill 6 services in 90 seconds',
+                'You saw a split-brain CAP violation unfold and diverge',
+                'You compared the same failure with and without circuit breakers',
+                'You predicted the next failure 15 seconds before it happened',
+                'System design answers come from memory, not theory',
+              ].map((t, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 10, marginBottom: 12,
+                  fontSize: 13, color: 'var(--text2)', alignItems: 'flex-start'
+                }}>
+                  <span style={{ color: 'var(--green)', marginTop: 2, flexShrink: 0 }}>✓</span>
+                  {t}
+                </div>
+              ))}
+            </div>
+          </FadeUp>
+        </div>
+
+        {/* Pull quote */}
+        <FadeUp delay={200}>
+          <div style={{
+            textAlign: 'center', padding: '40px 32px',
+            background: 'var(--bg2)', border: '1px solid var(--border)',
+            borderRadius: 16, maxWidth: 720, margin: '0 auto'
+          }}>
+            <div style={{
+              fontSize: 'clamp(18px,3vw,28px)', color: 'var(--text1)',
+              lineHeight: 1.5, fontStyle: 'italic', marginBottom: 16
+            }}>
+              "Senior engineers don't reason from CAP theorem every time. They <span style={{ color: 'var(--indigo)' }}>replay memories</span> of watching systems fail at 2am."
+            </div>
+            <div className="font-mono" style={{ fontSize: 11, color: 'var(--text3)' }}>
+              ARCHAOS GENERATES THOSE MEMORIES — SAFELY
+            </div>
+          </div>
+        </FadeUp>
+      </section>
+
+      {/* ══ WHAT IS ARCHAOS ══ */}
+      <section style={{
+        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)', padding: '96px 24px'
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <FadeUp>
+            <SectionHeader
+              pill="What Is Archaos"
+              title="A flight simulator for distributed systems"
+              sub="Pilots don't learn to crash-land by crashing real planes. They use simulators. Archaos is that simulator — for the production incidents you haven't lived through yet."
+            />
+          </FadeUp>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center', marginBottom: 64 }}>
+            <FadeUp delay={100}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 {[
-                  { num: '8+', label: 'Failure scenario types' },
-                  { num: '100%', label: 'Browser-based, no install' },
-                  { num: 'AI', label: 'Streaming narration engine' },
-                  { num: '∞', label: 'Custom topologies you can build' },
-                ].map((stat, i) => (
-                  <div key={i} className="p-4 bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl">
-                    <div className="text-2xl font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{stat.num}</div>
-                    <div className="text-xs text-[#555] mt-1">{stat.label}</div>
+                  { color: 'var(--indigo)', icon: '🎨', title: 'Build any topology', desc: 'Drag API Gateways, Services, Databases, Queues, Load Balancers, and CDNs onto an infinite canvas. Connect them with HTTP, gRPC, or message queue edges. Configure every parameter.' },
+                  { color: 'var(--red)', icon: '⚡', title: 'Inject real chaos', desc: 'Kill nodes, spike CPU, add 4000ms of latency, partition networks, exhaust connection pools, expire caches. Every failure type that has caused a real outage.' },
+                  { color: 'var(--green)', icon: '🧠', title: 'Watch and understand', desc: 'Traffic particles flow in real time. Node health states transition visually. AI streams a narration explaining WHY your system is dying and what to do about it.' },
+                ].map((item, i) => (
+                  <div key={i} style={{
+                    display: 'flex', gap: 16, padding: 20,
+                    background: 'var(--bg3)', borderRadius: 10,
+                    border: '1px solid var(--border)'
+                  }}>
+                    <div style={{ fontSize: 24, flexShrink: 0, lineHeight: 1 }}>{item.icon}</div>
+                    <div>
+                      <div style={{ fontWeight: 600, color: item.color, marginBottom: 4, fontSize: 14 }}>{item.title}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>{item.desc}</div>
+                    </div>
                   </div>
                 ))}
               </div>
-            </div>
+            </FadeUp>
 
-            <div className="space-y-4">
-              {[
-                { color: '#EF4444', title: 'The Problem It Solves', icon: AlertTriangle, body: 'Distributed failures are invisible until production. A 4-second database latency doesn\'t just slow down one query — it blocks every thread waiting for a response, causing a cascading freeze that takes your entire application offline. Understanding WHY this happens requires experiencing it.' },
-                { color: '#06B6D4', title: 'How Archaos Helps', icon: Eye, body: 'Archaos makes failure visual. You see traffic particles flowing between nodes. You watch node colors shift from green → yellow → red. You see queue depths climb. You see error rates spike. The system makes the invisible visible, transforming abstract concepts into intuitive experiences.' },
-                { color: '#10B981', title: 'What You Walk Away With', icon: CheckCircle, body: 'After running a scenario, you understand the exact failure pattern — cascade, retry storm, thundering herd, split brain — and the mitigation pattern that prevents it — circuit breakers, exponential backoff, cache-aside locking, write quorums.' },
-              ].map((card, i) => (
-                <div key={i} className="p-6 bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl space-y-2 hover:border-[#2A2A2A] transition-all">
-                  <div className="flex items-center gap-2">
-                    <card.icon size={14} style={{ color: card.color }} />
-                    <span className="text-[10px] font-mono font-bold tracking-widest uppercase" style={{ color: card.color }}>{card.title}</span>
-                  </div>
-                  <p className="text-xs text-[#666] leading-relaxed">{card.body}</p>
+            <FadeUp delay={200}>
+              <div style={{
+                background: 'var(--bg3)', border: '1px solid var(--border)',
+                borderRadius: 12, padding: 24
+              }}>
+                <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)', marginBottom: 16, letterSpacing: 2 }}>
+                  HEALTHY SYSTEM — 100 RPS
                 </div>
-              ))}
-            </div>
+                <TrafficFlowSVG failing={false} />
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 20, paddingTop: 20 }}>
+                  <div className="font-mono" style={{ fontSize: 10, color: '#EF4444', marginBottom: 16, letterSpacing: 2 }}>
+                    AFTER CHAOS — CASCADE FAILURE
+                  </div>
+                  <TrafficFlowSVG failing={true} />
+                </div>
+              </div>
+            </FadeUp>
           </div>
-        </FadeIn>
-
-        {/* Architecture Diagram */}
-        <FadeIn delay={200} className="mt-20">
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-bold text-[#888]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              A Real Topology Running Inside Archaos
-            </h3>
-            <p className="text-xs text-[#444] mt-2 font-mono">Animated particles show live traffic · Glowing nodes show health state · Red pulsing = CHAOS INJECTED</p>
-          </div>
-          <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8">
-            <ArchitectureDiagram />
-          </div>
-        </FadeIn>
+        </div>
       </section>
 
-      {/* ══ SECTION 2: HOW IT WORKS ══ */}
-      <section id="how-it-works" className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={Zap} label="How It Works" color="#10B981" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              The Archaos Simulation Cycle
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Five phases take you from blank canvas to deep architectural understanding. Each phase builds on the previous one, creating a complete learning loop.
-            </p>
-          </div>
-        </FadeIn>
+      {/* ══ HOW IT WORKS ══ */}
+      <section id="how-it-works" style={{ padding: '96px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <FadeUp>
+          <SectionHeader
+            pill="How It Works"
+            title={<>5 phases from blank canvas<br />to deep understanding</>}
+          />
+        </FadeUp>
 
-        <SimulationCycleFlow />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5,1fr)', gap: 16, marginBottom: 80 }}>
+          {[
+            { n: '01', icon: '🎨', color: 'var(--purple)', label: 'DESIGN', title: 'Build Topology', desc: 'Drag nodes and draw edges to build any microservices architecture.' },
+            { n: '02', icon: '⚙️', color: 'var(--indigo)', label: 'CONFIGURE', title: 'Set Parameters', desc: 'Replicas, timeouts, circuit breaker thresholds, retry policies.' },
+            { n: '03', icon: '▶', color: 'var(--cyan)', label: 'SIMULATE', title: 'Start Engine', desc: 'Web Worker runs at 10Hz. Canvas renders at 60fps. Both independent.' },
+            { n: '04', icon: '⚡', color: 'var(--red)', label: 'INJECT', title: 'Trigger Chaos', desc: 'Kill a node. Add latency. Partition the network. Expire the cache.' },
+            { n: '05', icon: '🧠', color: 'var(--green)', label: 'LEARN', title: 'AI Narration', desc: 'GPT-OSS-120B explains the failure pattern and predicts what\'s next.' },
+          ].map((s, i) => (
+            <FadeUp key={i} delay={i * 80}>
+              <div style={{
+                background: 'var(--bg2)', border: `1px solid ${s.color}30`,
+                borderRadius: 12, padding: 20, textAlign: 'center',
+                height: '100%', transition: 'all 0.3s'
+              }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = s.color; e.currentTarget.style.transform = 'translateY(-4px)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = s.color + '30'; e.currentTarget.style.transform = 'translateY(0)' }}
+              >
+                <div className="font-mono" style={{ fontSize: 9, color: s.color, letterSpacing: 3, marginBottom: 10 }}>{s.label}</div>
+                <div style={{ fontSize: 28, marginBottom: 10 }}>{s.icon}</div>
+                <div style={{ fontWeight: 600, color: 'var(--text1)', fontSize: 14, marginBottom: 8 }}>{s.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{s.desc}</div>
+                <div className="font-mono" style={{ fontSize: 9, color: 'var(--text3)', marginTop: 12 }}>{s.n}</div>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
 
-        {/* Failure timeline diagram */}
-        <FadeIn delay={100} className="mt-20">
-          <div className="text-center mb-8">
-            <h3 className="text-xl font-bold text-[#888]" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Failure Cascade Timeline — Visualized
+        {/* Cascade Timeline */}
+        <FadeUp delay={100}>
+          <div style={{ marginBottom: 64 }}>
+            <h3 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text1)', marginBottom: 8, textAlign: 'center' }}>
+              The Cascade — Second by Second
             </h3>
-            <p className="text-xs text-[#444] mt-2 font-mono">How a single database latency spike propagates across all services over 90 seconds</p>
+            <p style={{ color: 'var(--text2)', fontSize: 13, textAlign: 'center', marginBottom: 28 }}>
+              How a 4000ms database latency spike propagates through 6 services over 90 seconds
+            </p>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: 32, overflow: 'auto'
+            }}>
+              <CascadeTimeline />
+            </div>
           </div>
-          <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-8">
-            <FailureModeDiagram />
-          </div>
-        </FadeIn>
+        </FadeUp>
 
-        {/* Detailed step breakdown */}
-        <FadeIn delay={150} className="mt-20">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-6">
-              <h3 className="text-2xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                What happens during a simulation?
+        {/* State Machine */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, alignItems: 'center' }}>
+          <FadeUp delay={100}>
+            <div>
+              <h3 style={{ fontSize: 24, fontWeight: 700, marginBottom: 12, color: 'var(--text1)' }}>
+                Each node runs a 5-state health machine
               </h3>
-              <p className="text-sm text-[#666] leading-relaxed">
-                When you press <strong className="text-white">Start Simulation</strong>, Archaos launches a Web Worker that runs the simulation engine at real-time speed. The engine maintains the state of every node and edge, processes incoming requests, routes them through the topology, applies queue depths, checks connection pool availability, evaluates circuit breaker states, and emits health events.
+              <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.8, marginBottom: 20 }}>
+                Every service, database, and queue in your simulation is driven by a discrete state machine. State transitions happen based on real metrics — error rate, CPU percentage, queue depth, connection pool utilization.
               </p>
-              <p className="text-sm text-[#666] leading-relaxed">
-                The canvas updates every animation frame, drawing traffic particles along edges proportional to actual throughput. Node colors transition smoothly between states. A metrics panel shows live RPS, error rate, p99 latency, and queue depth graphs updated every second.
-              </p>
-              <p className="text-sm text-[#666] leading-relaxed">
-                When chaos is injected — say, 4000ms of artificial latency on the database connection — the ripple propagates upstream. You watch it happen in real time, the same way a Netflix SRE would watch a Grafana dashboard during an incident.
-              </p>
-            </div>
-            <div className="space-y-4">
               {[
-                { icon: BarChart2, color: '#7C3AED', title: 'Real-Time Metrics', desc: 'RPS, error rate, p99 latency, and queue depth charts update every simulation second — giving you a view identical to a production Grafana dashboard.' },
-                { icon: Network, color: '#06B6D4', title: 'Traffic Animation', desc: 'Colored particles flow along every edge proportional to actual throughput. When a link degrades, particles slow. When it fails, they stop entirely.' },
-                { icon: Brain, color: '#10B981', title: 'AI Streaming Narration', desc: 'A GPT-powered copilot explains each failure event as it happens — identifying the root cause, the blast radius, and the applicable resilience pattern.' },
-                { icon: Terminal, color: '#F59E0B', title: 'Interactive Checkpoints', desc: 'At key moments, the simulation pauses and asks you a multiple-choice question about what you just observed — reinforcing the learning with active recall.' },
-              ].map((item, i) => (
-                <div key={i} className="flex gap-4 p-4 bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl hover:border-[#222] transition-all">
-                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: `${item.color}15` }}>
-                    <item.icon size={18} style={{ color: item.color }} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{item.title}</h4>
-                    <p className="text-xs text-[#555] mt-1 leading-relaxed">{item.desc}</p>
-                  </div>
+                { state: 'HEALTHY', color: 'var(--green)', cond: 'Normal operation. Requests processing within thresholds.' },
+                { state: 'DEGRADED', color: 'var(--amber)', cond: 'CPU >75% or error rate >10%. Latency climbing.' },
+                { state: 'UNHEALTHY', color: 'var(--orange)', cond: 'CPU >95% or error rate >50%. Near failure.' },
+                { state: 'FAILED', color: 'var(--red)', cond: 'Health check failed or chaos-killed. Requests error immediately.' },
+                { state: 'RECOVERING', color: 'var(--indigo)', cond: 'Metrics improving. Traffic cautiously resuming.' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 10, alignItems: 'center', marginBottom: 8,
+                  fontSize: 12, color: 'var(--text2)'
+                }}>
+                  <div className="node-dot" style={{ background: s.color, color: s.color, flexShrink: 0 }} />
+                  <span className="font-mono" style={{ color: s.color, fontSize: 10, width: 100, flexShrink: 0 }}>{s.state}</span>
+                  <span>{s.cond}</span>
                 </div>
               ))}
             </div>
-          </div>
-        </FadeIn>
+          </FadeUp>
+          <FadeUp delay={200}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--border)',
+              borderRadius: 12, padding: 24
+            }}>
+              <StateMachineSVG />
+            </div>
+          </FadeUp>
+        </div>
       </section>
 
-      {/* ══ SECTION 3: FEATURES ══ */}
-      <section id="features" className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={Zap} label="Features" color="#06B6D4" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Everything You Need to Master<br />Distributed Systems Resilience
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Every feature is purpose-built to bridge the gap between academic distributed systems theory and real engineering practice.
-            </p>
+      {/* ══ SYSTEM ARCHITECTURE ══ */}
+      <section style={{
+        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)', padding: '96px 24px'
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <FadeUp>
+            <SectionHeader
+              pill="System Architecture"
+              title="How Archaos is built"
+              sub="The simulation runs in a Web Worker so the canvas stays at 60fps. AI narration streams token-by-token via Socket.IO. The backend is NestJS on Railway with GPT-OSS-120B via OpenRouter."
+            />
+          </FadeUp>
+          <FadeUp delay={100}>
+            <div style={{
+              background: 'var(--bg3)', border: '1px solid var(--border)',
+              borderRadius: 16, padding: 32, overflow: 'auto'
+            }}>
+              <SystemArchDiagram />
+            </div>
+          </FadeUp>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px,1fr))', gap: 20, marginTop: 32 }}>
+            {[
+              { color: 'var(--indigo)', title: 'React Flow Canvas', desc: 'Renders topology at 60fps on main thread. Custom node/edge components with live health indicators.' },
+              { color: 'var(--green)', title: 'Web Worker Engine', desc: 'Discrete event simulation at 10 ticks/sec. Completely off the main thread.' },
+              { color: 'var(--amber)', title: 'Socket.IO Narration', desc: 'GPT-OSS-120B tokens stream in real time. Kimi K2.6 fallback on 5-second timeout.' },
+              { color: 'var(--purple)', title: 'BFS Blast Radius', desc: 'PostgreSQL recursive CTE traverses dependency graph. Heat map overlaid on canvas.' },
+            ].map((c, i) => (
+              <FadeUp key={i} delay={i * 60}>
+                <div style={{
+                  background: 'var(--bg)', border: `1px solid ${c.color}25`,
+                  borderRadius: 10, padding: 16
+                }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, marginBottom: 10 }} />
+                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text1)', marginBottom: 6 }}>{c.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{c.desc}</div>
+                </div>
+              </FadeUp>
+            ))}
           </div>
-        </FadeIn>
+        </div>
+      </section>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* ══ SCENARIOS ══ */}
+      <section id="scenarios" style={{ padding: '96px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <FadeUp>
+          <SectionHeader
+            pill="Scenario Library"
+            title={<>8 failures that have taken down<br />real production systems</>}
+            sub="Amazon, Netflix, GitHub, Discord — these patterns caused real outages at real companies. Now you can experience all of them in your browser."
+          />
+        </FadeUp>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))', gap: 20 }}>
           {[
             {
-              icon: GitBranch, color: '#7C3AED', title: 'Visual Topology Builder', badge: 'DRAG & DROP CANVAS',
-              bullets: [
-                'Drag API Gateways, Services, Databases, Caches, Message Queues, and Load Balancers onto the canvas',
-                'Connect nodes with HTTP, gRPC, or message queue edges — each with configurable properties',
-                'Configure replicas, processing time, connection pool size, and health thresholds per node',
-                'Edge parameters: timeout, max retries, retry backoff policy, circuit breaker thresholds',
-                'Save and load custom topologies for later sessions',
-              ]
+              slug: 'the-cascade', tag: 'RESILIENCE', diff: 'BEGINNER', color: 'var(--green)', icon: '🌊',
+              title: 'The Cascade', time: '~10 min',
+              tldr: 'Database latency freezes 6 services in 90 seconds.',
+              mechanism: 'A 4000ms DB latency fills thread pools upstream. Each service waits. Queues back up. Error rates spike. The system freezes from the inside out.',
+              learn: 'WHY slow dependencies are more dangerous than dead ones.',
+              real: 'Amazon DynamoDB 2013 · Netflix holiday 2012'
             },
             {
-              icon: Skull, color: '#EF4444', title: 'Chaos Injection Engine', badge: 'FAULT SIMULATION',
-              bullets: [
-                'ADD_LATENCY — inject artificial millisecond delays on any edge to simulate slow dependencies',
-                'KILL_NODE — terminate a service instance to simulate OOM kills or pod crashes',
-                'NETWORK_PARTITION — sever the connection between two nodes (split-brain simulation)',
-                'CPU_SPIKE — simulate CPU pressure that slows processing on a service',
-                'MEMORY_PRESSURE — ramp memory usage to trigger OOM killer cycles',
-                'CACHE_EXPIRE — force cache key expiry to trigger thundering herd stampedes',
-                'TRAFFIC_SPIKE — multiply incoming RPS by a factor to simulate flash traffic events',
-              ]
+              slug: 'graceful-degradation', tag: 'RESILIENCE', diff: 'BEGINNER', color: 'var(--green)', icon: '🛡',
+              title: 'Graceful Degradation', time: '~10 min',
+              tldr: 'Same failure as The Cascade. Circuit breakers save the system.',
+              mechanism: 'Identical topology and chaos. 4 edge configurations changed: circuitBreakerEnabled: true. The system degrades partially instead of dying completely.',
+              learn: 'The exact configuration that separates survivable from fatal.',
+              real: 'Netflix Hystrix · AWS SDK circuit breakers'
             },
             {
-              icon: Brain, color: '#10B981', title: 'AI Narration Engine', badge: 'STREAMING COPILOT',
-              bullets: [
-                'Streams token-by-token explanation of failure events in real time (typewriter animation)',
-                'Identifies the root cause of each failure — not just what broke, but why',
-                'Explains the failure pattern by name: cascade, retry storm, thundering herd, split brain',
-                'Recommends the specific mitigation pattern: circuit breakers, backoff jitter, write quorum',
-                'Monitors queue depths, error rates, and latency spikes to trigger explanations proactively',
-              ]
+              slug: 'the-retry-storm', tag: 'TRAFFIC', diff: 'INTERMEDIATE', color: 'var(--amber)', icon: '🔁',
+              title: 'Retry Storm', time: '~12 min',
+              tldr: '3 retries with no backoff turns a struggling service into a dead one.',
+              mechanism: 'Payment Service is slow. Order Service retries 3 times immediately. This triples load on Payment, which makes it slower, which causes more retries. Feedback loop to 100% error rate.',
+              learn: 'Why exponential backoff with jitter is not optional.',
+              real: 'AWS 2012 ELB retry storm'
             },
             {
-              icon: BarChart2, color: '#F59E0B', title: 'Live Metrics Dashboard', badge: 'REAL-TIME TELEMETRY',
-              bullets: [
-                'Requests Per Second (RPS) line chart — see how load evolves over simulation time',
-                'Error Rate % — watch it climb from 0% to 100% as failures cascade',
-                'p99 Latency chart — shows tail latency degradation before systems fully fail',
-                'Queue Depth gauge for message queues — watch backlogs grow in real time',
-                'Per-node health status indicators: HEALTHY, DEGRADED, UNHEALTHY, FAILED, RECOVERING',
-              ]
+              slug: 'the-thundering-herd', tag: 'CACHING', diff: 'INTERMEDIATE', color: 'var(--amber)', icon: '🐘',
+              title: 'Thundering Herd', time: '~12 min',
+              tldr: 'Cache expiry sends 500 requests to a connection pool of 5.',
+              mechanism: 'Popular Redis key expires. All 500 concurrent requests miss cache and hit PostgreSQL simultaneously. Connection pool (size: 5) exhausts in milliseconds. All queries timeout.',
+              learn: 'Why cache stampedes need mutex locks or probabilistic early expiry.',
+              real: 'Instagram warmup outages · Reddit stampedes'
             },
             {
-              icon: Shield, color: '#06B6D4', title: 'Circuit Breaker Simulation', badge: 'RESILIENCE PATTERNS',
-              bullets: [
-                'Enable circuit breakers on any edge with configurable error threshold percentages',
-                'Watch circuit breaker OPEN state halt traffic and prevent cascade amplification',
-                'Observe HALF-OPEN probing after recovery timeout for safe traffic resumption',
-                'Compare The Cascade scenario (no circuit breakers) vs Graceful Degradation (circuit breakers)',
-                'See how fail-fast behavior actually improves user-facing error rates during incidents',
-              ]
+              slug: 'the-queue-flood', tag: 'QUEUING', diff: 'INTERMEDIATE', color: 'var(--amber)', icon: '📦',
+              title: 'Queue Flood', time: '~15 min',
+              tldr: 'Dead consumer fills Kafka. Producers start failing after 5 minutes.',
+              mechanism: 'Consumer crashes. Queue fills at producer rate. At max depth (300 messages), producers receive QUEUE_FULL and fail. Consumer recovers: backlog drains in a controlled flood.',
+              learn: 'How message queues buffer failures and why they eventually overflow.',
+              real: 'Uber queue incidents · Discord overflow outages'
             },
             {
-              icon: BookOpen, color: '#A78BFA', title: 'Guided Scenario Library', badge: 'STRUCTURED LEARNING',
-              bullets: [
-                '8+ pre-designed scenarios covering every major distributed systems failure pattern',
-                'Each scenario has a scripted chaos timeline with automatic fault injection at key moments',
-                'Interactive walkthrough with multiple-choice questions pausing the simulation at critical events',
-                'Difficulty levels: BEGINNER → INTERMEDIATE → ADVANCED progression path',
-                'Scenario completion cards and guided return to the scenario grid',
-              ]
+              slug: 'the-memory-leak', tag: 'INFRASTRUCTURE', diff: 'INTERMEDIATE', color: 'var(--amber)', icon: '💾',
+              title: 'Memory Leak', time: '~12 min',
+              tldr: 'Heap grows 1.5%/sec until OOM kill. Cycle repeats.',
+              mechanism: 'Objects accumulate without cleanup. Memory: 40% → 95% → OOM kill. Service restarts with fresh heap and immediately begins leaking again. Periodic outage cycle every 5 minutes.',
+              learn: 'OOM kill patterns and why liveness probes catch this before users do.',
+              real: 'Node.js event listener leaks · Java GC pressure'
+            },
+            {
+              slug: 'traffic-spike-survival', tag: 'SCALING', diff: 'ADVANCED', color: 'var(--red)', icon: '📈',
+              title: 'Traffic Spike', time: '~15 min',
+              tldr: '10x traffic. Your configuration determines what survives.',
+              mechanism: 'No hidden chaos. Just a 10x RPS multiplier. Which node fails first depends entirely on your replica count, connection pool size, and timeout configuration. Build wisely.',
+              learn: 'Right-sizing every parameter and what happens when you get it wrong.',
+              real: 'Black Friday e-commerce · Gaming server launches'
+            },
+            {
+              slug: 'split-brain', tag: 'CONSISTENCY', diff: 'ADVANCED', color: 'var(--red)', icon: '🧠',
+              title: 'Split Brain', time: '~18 min',
+              tldr: 'Network partition. Two databases both think they\'re the leader.',
+              mechanism: 'Replication link severed. DB East and DB West both promote to primary. Each accepts independent writes. Data diverges. Partition heals: conflicts exist with no clear winner.',
+              learn: 'CAP Theorem as a lived sequence of events — not a theoretical constraint.',
+              real: 'GitHub 2012 MySQL split-brain · Elasticsearch split-brain'
+            },
+          ].map((s, i) => (
+            <FadeUp key={i} delay={i * 40}>
+              <div className="scenario-card" style={{
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 12, padding: 24, cursor: 'pointer',
+                display: 'flex', flexDirection: 'column', gap: 12,
+                transition: 'all 0.3s', height: '100%'
+              }}
+                onClick={() => nav(`/learn/${s.slug}`)}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = s.color; e.currentTarget.style.background = 'var(--bg3)' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg2)' }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span className="font-mono" style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: 2 }}>{s.tag}</span>
+                  <span className="font-mono" style={{
+                    fontSize: 9, padding: '3px 8px', borderRadius: 4,
+                    background: s.color + '18', color: s.color, border: `1px solid ${s.color}30`
+                  }}>{s.diff}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: 28, lineHeight: 1 }}>{s.icon}</span>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 16, color: 'var(--text1)', marginBottom: 4 }}>{s.title}</div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--text3)' }}>{s.time}</div>
+                  </div>
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{s.tldr}</p>
+                <div style={{
+                  background: 'var(--bg3)', borderRadius: 8,
+                  padding: '10px 14px', fontSize: 11, color: 'var(--text3)',
+                  lineHeight: 1.6
+                }}>
+                  <span style={{ color: 'var(--text2)', fontWeight: 600 }}>How: </span>{s.mechanism}
+                </div>
+                <div style={{ fontSize: 11, color: s.color }}>
+                  <span style={{ opacity: 0.6 }}>You\'ll learn: </span>{s.learn}
+                </div>
+                <div className="font-mono" style={{ fontSize: 9, color: 'var(--text3)' }}>
+                  Real: {s.real}
+                </div>
+                <button style={{
+                  marginTop: 'auto', padding: '10px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                  background: 'transparent', border: `1px solid ${s.color}40`, color: s.color,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  transition: 'all 0.2s'
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.background = s.color + '18' }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                >
+                  <Play size={12} style={{ fill: 'currentColor' }} /> Launch Walkthrough
+                </button>
+              </div>
+            </FadeUp>
+          ))}
+        </div>
+      </section>
+
+      {/* ══ LEARNING PATH ══ */}
+      <section style={{
+        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)', padding: '96px 24px'
+      }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <FadeUp>
+            <SectionHeader
+              pill="Learning Path"
+              title="Beginner to advanced in 8 scenarios"
+              sub="Each scenario builds on the previous. By the end, you'll have watched every major distributed systems failure pattern play out in real time."
+            />
+          </FadeUp>
+          <LearningPath />
+        </div>
+      </section>
+
+      {/* ══ FEATURES ══ */}
+      <section id="features" style={{ padding: '96px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <FadeUp>
+          <SectionHeader
+            pill="Features"
+            title="Everything built to teach, not just demonstrate"
+          />
+        </FadeUp>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px,1fr))', gap: 24 }}>
+          {[
+            {
+              color: 'var(--indigo)', icon: GitBranch, title: 'Drag-and-Drop Topology Builder',
+              badge: 'CANVAS',
+              bullets: ['7 node types: Service, Database, Queue, Load Balancer, API Gateway, CDN, External API', '4 edge types: HTTP, gRPC, Message, Database Connection', 'Per-node config: replicas, CPU limit, processing time, connection pool, health thresholds', 'Per-edge config: timeout, max retries, retry backoff, circuit breaker threshold', 'Save and reload custom topologies anytime']
+            },
+            {
+              color: 'var(--red)', icon: Flame, title: 'Real-Time Chaos Injection',
+              badge: 'FAULT ENGINE',
+              bullets: ['ADD_LATENCY: inject ms of delay on any edge (simulates slow dependencies)', 'KILL_NODE: terminate service instances (OOM kill, pod crash simulation)', 'NETWORK_PARTITION: sever connections between nodes (split-brain scenarios)', 'CPU_SPIKE: simulate compute pressure slowing request processing', 'CACHE_EXPIRE: force cache miss to trigger thundering herd stampede', 'TRAFFIC_SPIKE: multiply RPS by any factor (flash sale simulation)']
+            },
+            {
+              color: 'var(--green)', icon: Brain, title: 'GPT-OSS-120B Streaming Narration',
+              badge: 'AI COPILOT',
+              bullets: ['Streams token-by-token explanation as failures happen in real time', 'Identifies root cause — not just WHAT broke but WHY it broke', 'Names the failure pattern: cascade, retry storm, thundering herd, split brain', 'Predicts what will break next with a time estimate (10–30 seconds ahead)', 'Auto-confirms predictions when the simulation matches the forecast', 'Falls back to Kimi K2.6 if primary model takes >5 seconds']
+            },
+            {
+              color: 'var(--amber)', icon: BarChart2, title: 'Live Metrics Dashboard',
+              badge: 'TELEMETRY',
+              bullets: ['Total RPS chart — watch load evolve over simulation time', 'System error rate — see it climb from 0% to 100% during cascade', 'P99 latency — tail latency spikes before full failure', 'Queue depth gauge for message queues — backlog growing in real time', 'Per-node health: HEALTHY, DEGRADED, UNHEALTHY, FAILED, RECOVERING', 'Event log with timestamps for every state change']
+            },
+            {
+              color: 'var(--cyan)', icon: Shield, title: 'Blast Radius Analysis',
+              badge: 'IMPACT MAP',
+              bullets: ['Click any node to calculate its blast radius before injecting chaos', 'BFS graph traversal through the dependency graph via PostgreSQL recursive CTE', 'Heat map overlay directly on canvas nodes with traffic percentage badges', 'Shield icons on nodes protected by circuit breakers', 'Critical path edges highlighted in red', 'Shows % of total system traffic at risk for each failure']
+            },
+            {
+              color: 'var(--purple)', icon: BookOpen, title: 'Guided Interactive Walkthroughs',
+              badge: 'LEARN MODE',
+              bullets: ['8 pre-scripted scenarios with timed automatic chaos injection', 'Simulation pauses at key moments to ask multiple-choice prediction questions', 'Cannot advance without answering — active recall reinforces learning', 'AI narration explains whether your prediction was correct and why', 'Completion tracking shows which patterns you\'ve seen and understood', 'Difficulty: BEGINNER → INTERMEDIATE → ADVANCED progression']
             },
           ].map((f, i) => (
-            <FadeIn key={i} delay={i * 60}>
-              <FeatureCard {...f} />
-            </FadeIn>
+            <FadeUp key={i} delay={i * 60}>
+              <div className="feature-card" style={{
+                background: 'var(--bg2)', border: '1px solid var(--border)',
+                borderRadius: 14, padding: 28, transition: 'all 0.3s', height: '100%'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 20 }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                    background: f.color + '18', border: `1px solid ${f.color}30`
+                  }}>
+                    <f.icon size={20} style={{ color: f.color }} />
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{
+                      fontSize: 9, padding: '3px 8px', borderRadius: 4,
+                      background: f.color + '15', color: f.color, marginBottom: 6
+                    }}>{f.badge}</div>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text1)' }}>{f.title}</div>
+                  </div>
+                </div>
+                <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {f.bullets.map((b, j) => (
+                    <li key={j} style={{
+                      display: 'flex', gap: 8, fontSize: 12, color: 'var(--text2)',
+                      lineHeight: 1.6, alignItems: 'flex-start'
+                    }}>
+                      <CheckCircle size={12} style={{ color: f.color, flexShrink: 0, marginTop: 3 }} />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </FadeUp>
           ))}
         </div>
+      </section>
 
-        {/* Node types section */}
-        <FadeIn delay={100} className="mt-20">
-          <h3 className="text-2xl font-bold text-center mb-10" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-            Available Node Types
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+      {/* ══ FOR WHOM ══ */}
+      <section id="for-whom" style={{
+        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)', padding: '96px 24px'
+      }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <FadeUp>
+            <SectionHeader
+              pill="Who Is This For"
+              title="Three very different people. One tool."
+            />
+          </FadeUp>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px,1fr))', gap: 24 }}>
             {[
-              { icon: '🔀', label: 'API Gateway', desc: 'Entry point. Distributes incoming RPS across downstream services.', color: '#06B6D4' },
-              { icon: '⚖️', label: 'Load Balancer', desc: 'Round-robin or least-connections traffic distribution.', color: '#7C3AED' },
-              { icon: '⚙️', label: 'Service', desc: 'Configurable replicas, processing time, and health thresholds.', color: '#10B981' },
-              { icon: '🗄️', label: 'Database', desc: 'PostgreSQL or Redis. Configurable connection pool and replication.', color: '#3B82F6' },
-              { icon: '📨', label: 'Message Queue', desc: 'Kafka or RabbitMQ. Configurable max queue depth and consumer lag.', color: '#F59E0B' },
-              { icon: '⚡', label: 'Cache Layer', desc: 'Redis cache with configurable TTL and miss-fall-through behavior.', color: '#EF4444' },
-            ].map((node, i) => (
-              <div key={i} className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-xl p-5 text-center space-y-2 hover:border-[#2A2A2A] transition-all">
-                <div className="text-3xl">{node.icon}</div>
-                <h4 className="text-xs font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif', color: node.color }}>{node.label}</h4>
-                <p className="text-[10px] text-[#444] leading-relaxed">{node.desc}</p>
-              </div>
+              {
+                color: 'var(--indigo)', icon: Cpu, role: 'Backend Engineers',
+                tagline: 'See what happens before it happens in production.',
+                who: 'You write services. You add timeouts and circuit breakers because someone told you to. You\'ve never actually watched a cascading failure unfold end to end.',
+                use: ['Understand why your retry logic can kill a struggling service', 'See what happens when you forget timeouts on HTTP clients', 'Watch connection pool exhaustion before it costs you a 3am page', 'Test your system design interview answers against reality'],
+                best: ['The Cascade', 'Retry Storm', 'Traffic Spike Survival']
+              },
+              {
+                color: 'var(--red)', icon: ShieldAlert, role: 'SREs & DevOps',
+                tagline: 'Practice runbooks before incidents find you.',
+                who: 'You run production systems. You\'ve been paged. You know the feeling of watching dashboards go red. Archaos lets you train for that without the production blast radius.',
+                use: ['Model blast radius before injecting real chaos', 'Train junior SREs on failure patterns with guided scenarios', 'Validate circuit breaker thresholds before deploying to staging', 'Show product managers failure modes without touching prod'],
+                best: ['Split Brain', 'Queue Flood', 'Graceful Degradation']
+              },
+              {
+                color: 'var(--cyan)', icon: GraduationCap, role: 'CS Students',
+                tagline: 'Go into interviews with memories, not definitions.',
+                who: 'You understand CAP theorem on paper. You\'ve read about cascading failures. But you\'ve never watched them happen. Archaos changes that in one session.',
+                use: ['Replace dry slides with interactive failure simulations', 'Answer system design questions from experience, not theory', 'Build the mental models senior engineers have from incidents', 'Get through distributed systems interviews differently'],
+                best: ['The Cascade', 'Thundering Herd', 'Split Brain']
+              },
+            ].map((a, i) => (
+              <FadeUp key={i} delay={i * 80}>
+                <div style={{
+                  background: 'var(--bg3)', border: `1px solid ${a.color}20`,
+                  borderRadius: 14, padding: 28, height: '100%',
+                  display: 'flex', flexDirection: 'column', gap: 16,
+                  transition: 'all 0.3s'
+                }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = a.color + '60' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = a.color + '20' }}
+                >
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 10, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    background: a.color + '18', border: `1px solid ${a.color}30`
+                  }}>
+                    <a.icon size={20} style={{ color: a.color }} />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: 18, color: 'var(--text1)', marginBottom: 4 }}>{a.role}</div>
+                    <div style={{ fontSize: 13, color: a.color }}>{a.tagline}</div>
+                  </div>
+                  <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.7 }}>{a.who}</p>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: 2, marginBottom: 10 }}>USE IT TO</div>
+                    {a.use.map((u, j) => (
+                      <div key={j} style={{
+                        display: 'flex', gap: 8, fontSize: 12, color: 'var(--text2)',
+                        marginBottom: 6, alignItems: 'flex-start'
+                      }}>
+                        <ArrowRight size={10} style={{ color: a.color, marginTop: 3, flexShrink: 0 }} />
+                        {u}
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div className="font-mono" style={{ fontSize: 9, color: 'var(--text3)', letterSpacing: 2, marginBottom: 10 }}>START WITH</div>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {a.best.map((b, j) => (
+                        <span key={j} className="font-mono" style={{
+                          fontSize: 10, padding: '4px 8px', borderRadius: 6,
+                          background: a.color + '15', color: a.color, border: `1px solid ${a.color}30`
+                        }}>{b}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </FadeUp>
             ))}
           </div>
-        </FadeIn>
+        </div>
       </section>
 
-      {/* ══ SECTION 4: FAILURE PATTERNS ══ */}
-      <section className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={AlertTriangle} label="Failure Patterns" color="#EF4444" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              The 8 Distributed Systems Failures<br />You Must Understand
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Each of these patterns has caused major outages at companies like Netflix, Amazon, and Meta. Archaos lets you experience all of them safely.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            {
-              num: '01', color: '#EF4444', icon: '🌊',
-              pattern: 'The Cascade Failure',
-              tldr: 'A slow dependency blocks threads upstream, freezing the entire application.',
-              mechanism: 'When Service B is slow, Service A\'s thread pool fills with requests waiting for B\'s response. New requests pile up. The entire system freezes — not because B failed, but because A ran out of threads.',
-              mitigation: 'Circuit Breakers + Timeouts',
-              real: 'Amazon 2013 DynamoDB outage. Netflix 2012 holiday outage.',
-            },
-            {
-              num: '02', color: '#F59E0B', icon: '🔁',
-              pattern: 'The Retry Storm',
-              tldr: 'Aggressive retries amplify load on a struggling service, preventing recovery.',
-              mechanism: 'Payment Service is slow. Order Service retries 3 times with 50ms fixed delay. This multiplies load on Payment by 4x. The extra load makes Payment even slower, creating a feedback loop until it crashes.',
-              mitigation: 'Exponential Backoff + Jitter',
-              real: 'AWS 2012 Elastic Load Balancer retry storm causing cascaded failures.',
-            },
-            {
-              num: '03', color: '#06B6D4', icon: '🐘',
-              pattern: 'The Thundering Herd',
-              tldr: 'A cache miss sends a stampede of concurrent requests to the database.',
-              mechanism: 'A popular cache key expires under high traffic. All 500 concurrent requests miss the cache and hit PostgreSQL simultaneously. The DB\'s connection pool (size: 5) is exhausted instantly. All queries timeout.',
-              mitigation: 'Cache-Aside Locking / Mutex on Cache Miss',
-              real: 'Instagram cache warmup outages. Reddit cache stampedes.',
-            },
-            {
-              num: '04', color: '#A78BFA', icon: '🧠',
-              pattern: 'The Split Brain',
-              tldr: 'A network partition causes two database nodes to think the other is dead and accept writes independently, diverging data.',
-              mechanism: 'The replication link between DB East and DB West is severed. Both promote themselves to primary. East accepts writes from East users, West from West users. When the partition heals, data conflicts exist with no clear winner.',
-              mitigation: 'Raft / Paxos Consensus · Write Quorums',
-              real: 'GitHub 2012 MySQL split-brain. Elasticsearch split-brain issues.',
-            },
-            {
-              num: '05', color: '#10B981', icon: '📦',
-              pattern: 'The Queue Flood',
-              tldr: 'A dead consumer lets a message queue fill up, causing producers to experience backpressure.',
-              mechanism: 'Consumer Service crashes. The Kafka queue starts filling at the producer\'s rate. Once it hits maxQueueDepth (300 messages), producers receive QUEUE_FULL errors and upstream requests begin failing. Consumer recovers and drains the backlog.',
-              mitigation: 'Dead Letter Queues + Consumer Autoscaling',
-              real: 'Uber message queue backlog incidents. Discord queue overflow outages.',
-            },
-            {
-              num: '06', color: '#F97316', icon: '💾',
-              pattern: 'The Memory Leak',
-              tldr: 'A slow heap leak causes OOM kills that create periodic outages in a repeating cycle.',
-              mechanism: 'Leak Service allocates objects without freeing them. Memory climbs from 40% → 70% → 95% → 100%. The OS OOM Killer terminates the process. The service restarts and begins leaking again immediately. Requests fail during each crash.',
-              mitigation: 'Heap Profiling + Memory Limits + Liveness Probes',
-              real: 'Node.js event listener leaks. Java GC pressure under load.',
-            },
-            {
-              num: '07', color: '#3B82F6', icon: '📈',
-              pattern: 'Traffic Spike Survival',
-              tldr: 'A 10x traffic spike overwhelms database connection pools before services scale.',
-              mechanism: 'A flash sale generates 10x normal traffic. The load balancer distributes to 2 service replicas (still scaling). The PostgreSQL connection pool (size: 10) is exhausted as both services send concurrent queries. Error rates spike to 60%.',
-              mitigation: 'Connection Pool Sizing + Horizontal Autoscaling',
-              real: 'Black Friday e-commerce failures. Gaming server launch crashes.',
-            },
-            {
-              num: '08', color: '#A78BFA', icon: '🛡️',
-              pattern: 'Graceful Degradation',
-              tldr: 'Circuit breakers isolate a failure, keeping the healthy parts of the system running.',
-              mechanism: 'Same topology as The Cascade, but circuit breakers are enabled on every edge. When DB latency spikes, the circuit on billing→payment trips OPEN. Payment fails fast with 503 instead of waiting. Order Service stays responsive for other operations.',
-              mitigation: 'This IS the mitigation — Circuit Breakers Done Right',
-              real: 'Netflix Hystrix pattern. AWS SDK circuit breakers.',
-            },
-          ].map((p, i) => (
-            <FadeIn key={i} delay={i * 50}>
-              <div
-                className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-7 space-y-4 hover:border-[#2A2A2A] transition-all"
-              >
-                <div className="flex items-start gap-4">
-                  <div className="text-3xl">{p.icon}</div>
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[9px] font-mono text-[#333]">{p.num}</span>
-                      <span className="text-[9px] px-2 py-0.5 rounded font-mono font-bold" style={{ background: `${p.color}15`, color: p.color }}>
-                        PATTERN
-                      </span>
-                    </div>
-                    <h3 className="text-lg font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif', color: p.color }}>
-                      {p.pattern}
-                    </h3>
-                    <p className="text-xs text-[#666] mt-1 italic">{p.tldr}</p>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-[10px] font-mono font-bold text-[#333] uppercase tracking-widest mb-1">HOW IT HAPPENS</p>
-                    <p className="text-xs text-[#666] leading-relaxed">{p.mechanism}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Shield size={11} style={{ color: p.color }} />
-                    <span className="text-[10px] font-mono font-bold" style={{ color: p.color }}>MITIGATION:</span>
-                    <span className="text-[10px] text-[#666]">{p.mitigation}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp size={11} className="text-[#333]" />
-                    <span className="text-[10px] font-mono text-[#333] font-bold">REAL-WORLD:</span>
-                    <span className="text-[10px] text-[#444]">{p.real}</span>
-                  </div>
+      {/* ══ GETTING STARTED ══ */}
+      <section style={{ padding: '96px 24px', maxWidth: 1100, margin: '0 auto' }}>
+        <FadeUp>
+          <SectionHeader
+            pill="Getting Started"
+            title="From zero to first simulation in 2 minutes"
+            sub="Two paths. Both start immediately. No account, no install, no setup."
+          />
+        </FadeUp>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+          {/* Path A */}
+          <FadeUp delay={100}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--green)30',
+              borderRadius: 14, padding: 32
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'var(--green)18', border: '1px solid var(--green)40',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: 14, color: 'var(--green)'
+                }}>A</div>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--green)', fontSize: 15 }}>Guided Scenarios</div>
+                  <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)' }}>RECOMMENDED FOR BEGINNERS</div>
                 </div>
               </div>
-            </FadeIn>
-          ))}
-        </div>
-      </section>
-
-      {/* ══ SECTION 5: FOR WHOM ══ */}
-      <section id="for-whom" className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={Users} label="Who It's For" color="#3B82F6" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Designed for Every<br />Level of Systems Thinker
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Whether you're a CS student encountering distributed systems for the first time, or an SRE running production runbooks, Archaos meets you where you are.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[
-            {
-              icon: Cpu, color: '#7C3AED', role: 'Backend & Software Engineers',
-              tagline: 'Level up your systems knowledge without a cluster',
-              useCases: [
-                'Understand how circuit breakers actually protect services in practice',
-                'See what happens when you forget to add timeouts on HTTP clients',
-                'Experience retry storms before deploying aggressive retry logic to production',
-                'Learn to right-size connection pools for your service\'s concurrency requirements',
-                'Prototype a new microservice topology before writing a single line of code',
-              ],
-              bestScenarios: ['The Cascade', 'Retry Storm', 'Graceful Degradation', 'Traffic Spike'],
-            },
-            {
-              icon: ShieldAlert, color: '#3B82F6', role: 'SREs & DevOps Teams',
-              tagline: 'Prepare for incidents before they happen',
-              useCases: [
-                'Model blast radius: which services are affected if Payments goes down?',
-                'Test runbook procedures against simulated failure scenarios',
-                'Validate circuit breaker thresholds before deploying to staging',
-                'Train junior SREs on incident patterns with guided scenario walkthroughs',
-                'Demonstrate failure scenarios to product managers without touching production',
-              ],
-              bestScenarios: ['Split Brain', 'Queue Flood', 'Memory Leak', 'Traffic Spike Survival'],
-            },
-            {
-              icon: GraduationCap, color: '#06B6D4', role: 'CS Students & Educators',
-              tagline: 'Bring distributed systems to life beyond textbooks',
-              useCases: [
-                'Replace dry CAP Theorem slides with a live split-brain simulation',
-                'Use guided scenarios as interactive homework assignments',
-                'Quiz students with live prediction checkpoints during scenarios',
-                'Teach load balancing algorithms visually with animated traffic flow',
-                'Cover advanced topics like backpressure and OOM cycles interactively',
-              ],
-              bestScenarios: ['The Cascade', 'Thundering Herd', 'Split Brain', 'Graceful Degradation'],
-            },
-          ].map((a, i) => (
-            <FadeIn key={i} delay={i * 80}>
-              <AudienceCard {...a} />
-            </FadeIn>
-          ))}
-        </div>
-
-        {/* High-value professions bonus section */}
-        <FadeIn delay={100} className="mt-16">
-          <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl p-10">
-            <h3 className="text-2xl font-bold mb-8 text-center" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Where Archaos Fits in Your Workflow
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-center">
               {[
-                { icon: '🏗️', title: 'Architecture Reviews', desc: 'Prototype a proposed service topology and run a failure simulation before the architecture review meeting.' },
-                { icon: '🎓', title: 'Onboarding Engineers', desc: 'Use Archaos scenarios to show new hires why the existing circuit breakers and timeouts exist.' },
-                { icon: '📋', title: 'Runbook Validation', desc: 'Test your incident response runbook steps against simulated failures to find gaps before an actual incident.' },
-                { icon: '🏫', title: 'University Courses', desc: 'Assign specific scenarios as graded labs for Distributed Systems or Cloud Computing courses.' },
-              ].map((w, i) => (
-                <div key={i} className="space-y-3">
-                  <div className="text-4xl">{w.icon}</div>
-                  <h4 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{w.title}</h4>
-                  <p className="text-xs text-[#555] leading-relaxed">{w.desc}</p>
+                { n: 1, t: 'Click "Scenarios" in the navbar', d: 'All 8 scenarios available immediately. No account needed.' },
+                { n: 2, t: 'Choose a scenario by difficulty', d: 'Start with The Cascade (BEGINNER). Read the setup description.' },
+                { n: 3, t: 'Press Start Simulation', d: 'Topology loads with nodes and edges pre-configured.' },
+                { n: 4, t: 'Answer the prediction checkpoint', d: 'Simulation pauses and asks what you think happens next.' },
+                { n: 5, t: 'Watch the AI narration stream', d: 'GPT-OSS-120B explains the failure pattern in real time.' },
+                { n: 6, t: 'Try Graceful Degradation next', d: 'Same topology, circuit breakers on. Compare the outcomes.' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 14, marginBottom: 16, alignItems: 'flex-start'
+                }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%', background: 'var(--bg3)',
+                    border: '1px solid var(--border)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, marginTop: 2
+                  }}>
+                    <span className="font-mono" style={{ fontSize: 9, color: 'var(--text3)' }}>{s.n}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text1)', marginBottom: 3 }}>{s.t}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{s.d}</div>
+                  </div>
                 </div>
               ))}
+              <button onClick={() => nav('/learn/the-cascade')} style={{
+                width: '100%', padding: '14px', borderRadius: 10, marginTop: 8,
+                background: 'var(--green)', color: '#080B0F', fontWeight: 700,
+                fontSize: 14, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'opacity 0.2s'
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                <Play size={14} style={{ fill: '#080B0F' }} /> Start The Cascade
+              </button>
             </div>
-          </div>
-        </FadeIn>
+          </FadeUp>
+
+          {/* Path B */}
+          <FadeUp delay={180}>
+            <div style={{
+              background: 'var(--bg2)', border: '1px solid var(--indigo)30',
+              borderRadius: 14, padding: 32
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%',
+                  background: 'var(--indigo)18', border: '1px solid var(--indigo)40',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 700, fontSize: 14, color: 'var(--indigo)'
+                }}>B</div>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--indigo)', fontSize: 15 }}>Freestyle Playground</div>
+                  <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)' }}>FOR ENGINEERS</div>
+                </div>
+              </div>
+              {[
+                { n: 1, t: 'Click "Open Playground" in the navbar', d: 'Blank canvas. Node palette on the left. Metrics panel on the right.' },
+                { n: 2, t: 'Drag nodes from the palette', d: 'Gateway → Load Balancer → Services → Database. Any topology you want.' },
+                { n: 3, t: 'Connect nodes by drawing edges', d: 'Click and drag between node handles. Configure timeout, retries, circuit breakers.' },
+                { n: 4, t: 'Hit Start — set RPS and pattern', d: 'Constant, sinusoidal, spike, or ramp traffic. Watch it flow.' },
+                { n: 5, t: 'Inject chaos from the panel', d: 'Click any node or use Quick Chaos. Kill it. Spike it. Partition it.' },
+                { n: 6, t: 'Observe and iterate', d: 'Enable circuit breakers. Increase pool sizes. Restart. Compare.' },
+              ].map((s, i) => (
+                <div key={i} style={{
+                  display: 'flex', gap: 14, marginBottom: 16, alignItems: 'flex-start'
+                }}>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: '50%', background: 'var(--bg3)',
+                    border: '1px solid var(--border)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0, marginTop: 2
+                  }}>
+                    <span className="font-mono" style={{ fontSize: 9, color: 'var(--text3)' }}>{s.n}</span>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text1)', marginBottom: 3 }}>{s.t}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>{s.d}</div>
+                  </div>
+                </div>
+              ))}
+              <button onClick={() => nav('/editor')} style={{
+                width: '100%', padding: '14px', borderRadius: 10, marginTop: 8,
+                background: 'var(--indigo)', color: '#fff', fontWeight: 700,
+                fontSize: 14, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                transition: 'opacity 0.2s'
+              }}
+                onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              >
+                <Terminal size={14} /> Open Playground
+              </button>
+            </div>
+          </FadeUp>
+        </div>
       </section>
 
-      {/* ══ SECTION 6: SCENARIOS ══ */}
-      <section id="scenarios" className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={Play} label="Scenario Library" color="#10B981" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Launch a Scenario in 30 Seconds
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Every scenario is pre-configured with a topology, chaos timeline, and guided walkthrough. Pick your level and press play.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      {/* ══ FAQ ══ */}
+      <section style={{
+        background: 'var(--bg2)', borderTop: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)', padding: '96px 24px'
+      }}>
+        <div style={{ maxWidth: 760, margin: '0 auto' }}>
+          <FadeUp>
+            <SectionHeader pill="FAQ" title="Common questions" />
+          </FadeUp>
           {[
-            { slug: 'the-cascade', tag: 'Resilience', difficulty: 'BEGINNER' as const, title: 'The Cascade', description: 'A 4000ms database latency propagates upstream through 6 services in 90 seconds, freezing the entire application. No circuit breakers. Complete thread pool exhaustion.' },
-            { slug: 'graceful-degradation', tag: 'Resilience', difficulty: 'BEGINNER' as const, title: 'Graceful Degradation', description: 'Identical topology and chaos as The Cascade — but with circuit breakers enabled. Watch how fail-fast behavior isolates the failure and keeps the healthy services running.' },
-            { slug: 'the-retry-storm', tag: 'Traffic', difficulty: 'INTERMEDIATE' as const, title: 'Retry Storm', description: 'A CPU spike slows Payment Service past the 200ms timeout. Three aggressive fixed-backoff retries amplify load by 4x, crashing a service that was only slightly struggling.' },
-            { slug: 'the-thundering-herd', tag: 'Cache', difficulty: 'INTERMEDIATE' as const, title: 'The Thundering Herd', description: 'A popular Redis cache key expires under heavy traffic. 500 concurrent requests miss the cache and stampede PostgreSQL simultaneously, exhausting its tiny connection pool.' },
-            { slug: 'split-brain', tag: 'Consistency', difficulty: 'ADVANCED' as const, title: 'Split Brain', description: 'A network partition severs the replication link between two database nodes. Both promote themselves to primary and accept independent writes — causing silent data divergence.' },
-            { slug: 'the-queue-flood', tag: 'Queuing', difficulty: 'INTERMEDIATE' as const, title: 'The Queue Flood', description: 'The Consumer Service crashes. The Kafka queue fills to its 300-message limit. Producers start failing with QUEUE_FULL errors. Consumer recovers and the backlog drains.' },
-            { slug: 'the-memory-leak', tag: 'Memory', difficulty: 'INTERMEDIATE' as const, title: 'The Memory Leak', description: 'A slow heap leak drives Leak Service memory from 40% to 100%, triggering an OOM kill. The process restarts and immediately begins leaking again in a repeating crash cycle.' },
-            { slug: 'traffic-spike-survival', tag: 'Scaling', difficulty: 'ADVANCED' as const, title: 'Traffic Spike Survival', description: 'A 10x traffic spike overwhelms a 2-replica load-balanced system before autoscaling kicks in. Database connection pool exhaustion determines whether you survive or crash.' },
-          ].map((s, i) => (
-            <FadeIn key={i} delay={i * 40}>
-              <ScenarioCard {...s} onLaunch={() => navigate(`/learn/${s.slug}`)} />
-            </FadeIn>
+            {
+              q: 'Does Archaos require Docker, Kubernetes, or cloud credentials?',
+              a: 'No. The simulation engine runs entirely inside a Web Worker in your browser. There\'s no real infrastructure involved. You need nothing installed and no accounts with any cloud provider.'
+            },
+            {
+              q: 'Is the simulation realistic or just a toy?',
+              a: 'The simulation models real distributed systems mechanics: HTTP request routing, thread pool exhaustion, circuit breaker state machines (CLOSED → OPEN → HALF-OPEN → CLOSED), message queue backpressure, retry amplification, cache miss stampedes, and OOM kill cycles. The failure patterns are based on real incident postmortems from Netflix, Amazon, GitHub, and Discord. It\'s not a real Kubernetes cluster, but the mechanics are accurate enough to build genuine intuition.'
+            },
+            {
+              q: 'How does the AI narration work exactly?',
+              a: 'Archaos monitors every simulation state change — node health transitions, error rate thresholds, circuit breaker trips, queue depth growth. Significant events trigger a request to GPT-OSS-120B via OpenRouter. The model receives the current topology, the event that just happened, and the live system state, then generates a streaming explanation that appears token-by-token in the narration panel. If GPT-OSS-120B takes more than 5 seconds to respond, Kimi K2.6 automatically handles the request.'
+            },
+            {
+              q: 'I\'m a student preparing for system design interviews. Where do I start?',
+              a: 'Run The Cascade (BEGINNER) first — 10 minutes. Then immediately run Graceful Degradation with the identical topology. In 20 minutes you\'ll have watched a cascading failure happen and then watched the identical failure be contained by circuit breakers. That comparison gives you a concrete answer to "how would you make this system more resilient" that comes from direct experience rather than reading.'
+            },
+            {
+              q: 'I\'m an experienced SRE. Is Archaos too basic for me?',
+              a: 'The ADVANCED scenarios (Split Brain, Traffic Spike Survival) model genuinely complex failure modes. The free-form Playground lets you reconstruct your actual production topology and simulate your highest-risk failure scenarios. Many engineers use Archaos to demonstrate failure modes to engineering managers or product stakeholders who don\'t have the infrastructure background to reason about these risks.'
+            },
+            {
+              q: 'Is Archaos free?',
+              a: 'Yes. All 8 scenarios, the visual playground, and the canvas editor are free with no account required. AI narration is included with usage limits. Saving custom topologies requires creating a free account.'
+            },
+          ].map((f, i) => (
+            <FAQItem key={i} f={f} i={i} />
           ))}
         </div>
-      </section>
-
-      {/* ══ SECTION 7: COMPARISON TABLE ══ */}
-      <section className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={BarChart2} label="Comparison" color="#A78BFA" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Archaos vs. Other Chaos Tools
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              Archaos is not a production chaos engineering tool — it's a learning-first simulator. Here's how it compares.
-            </p>
-          </div>
-          <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl overflow-hidden">
-            <ComparisonTable />
-          </div>
-          <p className="text-xs text-center text-[#333] mt-4 font-mono">
-            Chaos Monkey and Gremlin are production tools that require real infrastructure. Archaos is a browser-based learning simulator.
-          </p>
-        </FadeIn>
-      </section>
-
-      {/* ══ SECTION 8: HOW TO USE STEP BY STEP ══ */}
-      <section className="py-28 px-6 max-w-6xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={BookOpen} label="Getting Started" color="#06B6D4" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              How to Use Archaos
-            </h2>
-            <p className="text-[#666] mt-4 max-w-xl mx-auto text-sm leading-relaxed">
-              From zero to your first chaos simulation in under 2 minutes. Two paths: guided scenarios or freestyle playground.
-            </p>
-          </div>
-        </FadeIn>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          {/* Path 1 */}
-          <FadeIn>
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[#10B981] font-bold text-sm">A</div>
-                <h3 className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#10B981' }}>
-                  Path A: Guided Scenarios (Recommended for Beginners)
-                </h3>
-              </div>
-              <div className="space-y-4 border-l border-[#1A1A1A] pl-6">
-                {[
-                  { step: '1', title: 'Go to Scenarios', desc: 'Click "Scenarios" in the navbar or choose a scenario card on this page. All 8 scenarios are available without an account.' },
-                  { step: '2', title: 'Read the Description', desc: 'Each scenario tells you exactly what system you\'re looking at, what chaos will be injected, and at what time (e.g., "at t=15s, we inject 4000ms DB latency").' },
-                  { step: '3', title: 'Press Start', desc: 'Click Start Simulation. The simulation begins running at real-time speed. Watch the canvas animate traffic particles between services.' },
-                  { step: '4', title: 'Answer the Checkpoint', desc: 'At key moments, the simulation pauses and asks you a question about what just happened. Answer correctly to continue.' },
-                  { step: '5', title: 'Read the AI Narration', desc: 'Watch the streaming AI copilot explain each failure event in real time. It identifies the pattern and mitigation in plain language.' },
-                  { step: '6', title: 'Complete & Compare', desc: 'After completing The Cascade, try Graceful Degradation with the same topology but circuit breakers enabled — and see the difference.' },
-                ].map((s, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-[#0F0F0F] border border-[#1A1A1A] flex items-center justify-center text-[10px] font-mono text-[#555] flex-shrink-0 mt-0.5">{s.step}</div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{s.title}</h4>
-                      <p className="text-xs text-[#555] mt-1 leading-relaxed">{s.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </FadeIn>
-
-          {/* Path 2 */}
-          <FadeIn delay={100}>
-            <div className="space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-[#7C3AED]/20 flex items-center justify-center text-[#7C3AED] font-bold text-sm">B</div>
-                <h3 className="text-xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif', color: '#7C3AED' }}>
-                  Path B: Freestyle Playground (For Engineers)
-                </h3>
-              </div>
-              <div className="space-y-4 border-l border-[#1A1A1A] pl-6">
-                {[
-                  { step: '1', title: 'Open the Editor', desc: 'Click "Playground" in the navbar. You\'ll see a blank canvas with a node palette on the left side.' },
-                  { step: '2', title: 'Build Your Topology', desc: 'Drag nodes from the palette onto the canvas: API Gateway → Load Balancer → Services → Database. Draw edges by clicking and dragging between node handles.' },
-                  { step: '3', title: 'Configure Each Node', desc: 'Click any node to open its property panel. Set replicas, processing time, connection pool size, circuit breaker settings, and retry policies.' },
-                  { step: '4', title: 'Start Simulation', desc: 'Hit Start in the top panel. Set base RPS and traffic pattern. Watch traffic begin flowing. All nodes start in HEALTHY state.' },
-                  { step: '5', title: 'Inject Chaos', desc: 'Use the Chaos panel to select a fault type and target node or edge. Inject latency, kill a node, or trigger a network partition.' },
-                  { step: '6', title: 'Observe & Iterate', desc: 'Watch the cascade in the metrics panel. Adjust parameters — add circuit breakers, increase pool sizes — and restart to see the difference.' },
-                ].map((s, i) => (
-                  <div key={i} className="flex gap-4">
-                    <div className="w-6 h-6 rounded-full bg-[#0F0F0F] border border-[#1A1A1A] flex items-center justify-center text-[10px] font-mono text-[#555] flex-shrink-0 mt-0.5">{s.step}</div>
-                    <div>
-                      <h4 className="text-sm font-bold text-white" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>{s.title}</h4>
-                      <p className="text-xs text-[#555] mt-1 leading-relaxed">{s.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
-
-      {/* ══ SECTION 9: FAQ ══ */}
-      <section className="py-28 px-6 max-w-4xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div className="text-center mb-14">
-            <SectionPill icon={HelpCircle} label="FAQ" color="#F59E0B" />
-            <h2 className="text-4xl font-bold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-              Frequently Asked Questions
-            </h2>
-          </div>
-        </FadeIn>
-
-        <FadeIn delay={100}>
-          <div className="bg-[#0A0A0A] border border-[#1A1A1A] rounded-2xl px-8">
-            {[
-              {
-                q: 'Does Archaos require any installation, Docker, or cloud credentials?',
-                a: 'No. Archaos runs entirely in the browser using a Web Worker for the simulation engine. There is no server involved in the simulation itself. You don\'t need Docker, Kubernetes, AWS credentials, or any local setup. All you need is a modern browser.',
-              },
-              {
-                q: 'Is the simulation realistic or just a toy?',
-                a: 'The simulation models real distributed systems mechanics: HTTP request routing, connection pool exhaustion, circuit breaker state machines (CLOSED → OPEN → HALF-OPEN), message queue backpressure, retry amplification, and cache miss waterfall effects. The failure patterns are based on real-world incident reports from companies like Netflix, Amazon, and GitHub. While it\'s a simulation (not a real Kubernetes cluster), the underlying mechanics are accurate enough to teach genuine intuition.',
-              },
-              {
-                q: 'How does the AI narration work?',
-                a: 'During a simulation, Archaos monitors every state change event — node health transitions, error rate spikes, queue depth growth, circuit breaker trips. These events are sent to a language model with context about the current topology and fault. The model generates a streaming explanation that is displayed token-by-token in the narration panel, explaining what happened, why, and what pattern it represents.',
-              },
-              {
-                q: 'Can I build my own custom topologies, or only use pre-built scenarios?',
-                a: 'Both. The Scenario Library provides 8+ pre-configured failure scenarios with guided walkthroughs and quiz checkpoints. The Playground (Editor) gives you a blank canvas where you can build any topology from scratch, configure every parameter, and inject any fault at any time. It\'s like a free-form chaos engineering sandbox.',
-              },
-              {
-                q: 'I\'m a student learning distributed systems — where should I start?',
-                a: 'Start with "The Cascade" scenario (BEGINNER). It covers the most important concept in distributed systems: how a slow dependency causes a cascade failure upstream. After that, run "Graceful Degradation" — the exact same topology but with circuit breakers enabled — and compare the results. Those two scenarios together teach the most impactful lesson in systems resilience in about 10 minutes.',
-              },
-              {
-                q: 'I\'m a senior SRE — is this too basic for me?',
-                a: 'Not necessarily. The INTERMEDIATE and ADVANCED scenarios (Split Brain, Traffic Spike Survival, Thundering Herd) model genuinely complex failure modes. The free-form Playground lets you reconstruct your actual production topology and simulate your most feared failure scenarios. Many engineers use Archaos to demonstrate failure modes to stakeholders who are unfamiliar with infrastructure.',
-              },
-              {
-                q: 'Is Archaos free?',
-                a: 'The core simulator, all 8 scenarios, and the visual canvas editor are free to use without an account. Creating an account allows you to save custom topologies. AI narration is available in the free tier with a usage limit. We will introduce team and enterprise tiers for collaborative use and unlimited AI narration.',
-              },
-            ].map((faq, i) => (
-              <FAQItem key={i} {...faq} />
-            ))}
-          </div>
-        </FadeIn>
       </section>
 
       {/* ══ FINAL CTA ══ */}
-      <section className="py-32 px-6 max-w-5xl mx-auto w-full z-10 relative border-t border-[#0F0F0F]">
-        <FadeIn>
-          <div
-            className="rounded-3xl p-16 text-center space-y-8 relative overflow-hidden"
-            style={{ background: 'linear-gradient(135deg, #7C3AED12, #06B6D412)', border: '1px solid #7C3AED30' }}
-          >
-            {/* Glow blobs */}
-            <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: '#7C3AED' }} />
-            <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: '#06B6D4' }} />
-
-            <div className="relative z-10 space-y-6">
-              <div className="text-6xl">🚀</div>
-              <h2 className="text-4xl md:text-5xl font-extrabold" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>
-                Ready to build systems<br />
-                <span className="bg-gradient-to-r from-[#A78BFA] to-[#06B6D4] bg-clip-text text-transparent">
-                  that don't break?
-                </span>
-              </h2>
-              <p className="text-[#888] text-lg max-w-lg mx-auto leading-relaxed">
-                Start with a guided scenario in 30 seconds, or jump straight into the free-form playground. No setup. No credentials. No excuses.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
-                <button
-                  onClick={() => navigate('/learn/the-cascade')}
-                  className="px-8 py-4 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white font-bold rounded-xl flex items-center gap-2 shadow-2xl shadow-[#7C3AED]/30 hover:opacity-90 active:scale-[0.98] transition-all text-sm"
-                >
-                  <Play size={14} className="fill-white" />
-                  Start with The Cascade — Free
-                </button>
-                <button
-                  onClick={() => navigate('/editor')}
-                  className="px-8 py-4 border border-[#333] hover:border-[#7C3AED] text-[#888] hover:text-white font-semibold rounded-xl transition-all text-sm flex items-center gap-2"
-                >
-                  <Terminal size={14} /> Open Playground
-                </button>
-              </div>
-              <div className="flex items-center justify-center gap-8 pt-2 text-xs text-[#444]">
-                <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> Free forever tier</span>
-                <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> No credit card required</span>
-                <span className="flex items-center gap-1.5"><CheckCircle size={12} className="text-[#10B981]" /> 8 scenarios included</span>
-              </div>
-            </div>
+      <section style={{ padding: '96px 24px', maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+        <FadeUp>
+          <div className="font-mono" style={{
+            fontSize: 11, color: 'var(--indigo)', letterSpacing: 3,
+            marginBottom: 24, textTransform: 'uppercase'
+          }}>Stop Reading. Start Watching.</div>
+          <h2 className="font-display" style={{
+            fontSize: 'clamp(48px,8vw,96px)', color: 'var(--text1)',
+            lineHeight: 0.95, marginBottom: 24
+          }}>
+            The cascade won't wait.
+          </h2>
+          <p style={{
+            fontSize: 16, color: 'var(--text2)', maxWidth: 520,
+            margin: '0 auto 40px', lineHeight: 1.7
+          }}>
+            Every engineer eventually learns these lessons. The question is whether you learn them from a simulation or from a 2am production incident.
+          </p>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => nav('/learn/the-cascade')} className="cta-btn"
+              style={{
+                padding: '18px 40px', borderRadius: 12, fontSize: 15, fontWeight: 700,
+                background: 'var(--indigo)', color: '#fff', cursor: 'pointer', border: 'none',
+                boxShadow: '0 0 60px rgba(99,102,241,0.35)', transition: 'all 0.2s',
+                display: 'flex', alignItems: 'center', gap: 10
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 0 80px rgba(99,102,241,0.5)' }}
+              onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 0 60px rgba(99,102,241,0.35)' }}
+            >
+              <Play size={16} style={{ fill: '#fff' }} />
+              Run The Cascade — Free
+            </button>
+            <button onClick={() => nav('/scenarios')} className="cta-btn"
+              style={{
+                padding: '18px 40px', borderRadius: 12, fontSize: 15, fontWeight: 600,
+                background: 'transparent', color: 'var(--text2)', cursor: 'pointer',
+                border: '1px solid var(--border2)', transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--text2)'; e.currentTarget.style.color = 'var(--text1)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border2)'; e.currentTarget.style.color = 'var(--text2)' }}
+            >
+              Browse All Scenarios →
+            </button>
           </div>
-        </FadeIn>
+          <div className="font-mono" style={{
+            marginTop: 32, fontSize: 11, color: 'var(--text3)', lineHeight: 2
+          }}>
+            Free forever · No credit card · No install · 8 scenarios · AI narration included
+          </div>
+        </FadeUp>
       </section>
 
       {/* ══ FOOTER ══ */}
-      <footer className="border-t border-[#0F0F0F] py-12 px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
-            <div className="space-y-3">
-              <div className="font-bold tracking-[3px] text-white text-base" style={{ fontFamily: 'Space Grotesk, sans-serif' }}>ARCHAOS</div>
-              <p className="text-xs text-[#444] leading-relaxed">
-                A visual, interactive distributed systems failure simulator with AI narration. Built for engineers, SREs, and students.
+      <footer style={{ borderTop: '1px solid var(--border)', padding: '48px 24px' }}>
+        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px,1fr))', gap: 40, marginBottom: 48 }}>
+            <div>
+              <div className="font-display" style={{ fontSize: 24, letterSpacing: 4, marginBottom: 12, color: 'var(--text1)' }}>
+                ARCHAOS
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.7 }}>
+                A visual distributed systems simulator with AI narration. Built for engineers who want to understand failure before it finds them.
               </p>
             </div>
             <div>
-              <h4 className="text-[10px] font-mono font-bold tracking-widest text-[#333] uppercase mb-4">Product</h4>
-              <ul className="space-y-2.5">
-                {['Playground', 'Scenarios', 'Learn'].map(l => (
-                  <li key={l}>
-                    <Link to={`/${l.toLowerCase()}`} className="text-xs text-[#444] hover:text-white transition-colors">{l}</Link>
-                  </li>
-                ))}
-              </ul>
+              <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 3, marginBottom: 16 }}>PRODUCT</div>
+              {[['Playground', '/editor'], ['Scenarios', '/scenarios'], ['The Cascade', '/learn/the-cascade'], ['Sign Up', '/auth']].map(([l, p]) => (
+                <div key={l} style={{ marginBottom: 8 }}>
+                  <Link to={p} style={{ fontSize: 13, color: 'var(--text3)', transition: 'color 0.2s', textDecoration: 'none' }}
+                    onMouseEnter={e => e.currentTarget.style.color = 'var(--text1)'}
+                    onMouseLeave={e => e.currentTarget.style.color = 'var(--text3)'}
+                  >{l}</Link>
+                </div>
+              ))}
             </div>
             <div>
-              <h4 className="text-[10px] font-mono font-bold tracking-widest text-[#333] uppercase mb-4">Scenarios</h4>
-              <ul className="space-y-2.5">
-                {['The Cascade', 'Retry Storm', 'Thundering Herd', 'Split Brain'].map(l => (
-                  <li key={l}>
-                    <span className="text-xs text-[#444]">{l}</span>
-                  </li>
-                ))}
-              </ul>
+              <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 3, marginBottom: 16 }}>SCENARIOS</div>
+              {['The Cascade', 'Graceful Degradation', 'Retry Storm', 'Thundering Herd', 'Queue Flood', 'Split Brain'].map(l => (
+                <div key={l} style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 8 }}>{l}</div>
+              ))}
             </div>
             <div>
-              <h4 className="text-[10px] font-mono font-bold tracking-widest text-[#333] uppercase mb-4">Get Started</h4>
-              <div className="space-y-2">
-                <Link
-                  to="/auth"
-                  state={{ mode: 'register' }}
-                  className="block w-full px-4 py-2 bg-gradient-to-r from-[#7C3AED] to-[#4F46E5] text-white text-xs font-bold rounded-lg hover:opacity-85 transition-all text-center"
-                >
-                  Sign Up Free
-                </Link>
-                <Link
-                  to="/editor"
-                  className="block w-full px-4 py-2 border border-[#1A1A1A] text-[#444] hover:text-white hover:border-[#333] text-xs font-bold rounded-lg transition-all text-center"
-                >
-                  Open Playground
-                </Link>
-              </div>
+              <div className="font-mono" style={{ fontSize: 10, color: 'var(--text3)', letterSpacing: 3, marginBottom: 16 }}>BUILT WITH</div>
+              {['React Flow · Web Workers', 'NestJS · PostgreSQL', 'Redis · Socket.IO', 'GPT-OSS-120B · Kimi K2.6', 'Qdrant · OpenRouter', 'Railway · Vercel'].map(l => (
+                <div key={l} className="font-mono" style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>{l}</div>
+              ))}
             </div>
           </div>
-          <div className="border-t border-[#0F0F0F] pt-6 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-[10px] font-mono text-[#333]">© {new Date().getFullYear()} ARCHAOS. All rights reserved.</p>
-            <p className="text-[10px] font-mono text-[#222]">
-              Built for engineers who want to understand failure before it finds them.
-            </p>
+          <div style={{
+            borderTop: '1px solid var(--border)', paddingTop: 24,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 12
+          }}>
+            <span className="font-mono" style={{ fontSize: 10, color: 'var(--text3)' }}>
+              © {new Date().getFullYear()} ARCHAOS — All rights reserved
+            </span>
+            <span className="font-mono" style={{ fontSize: 10, color: 'var(--text3)' }}>
+              Built for engineers who want to remember failure, not just read about it
+            </span>
           </div>
         </div>
       </footer>
     </div>
   )
 }
+
+export function FAQItem({ f, i }: { f: { q: string; a: string }; i: number }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <FadeUp key={i} delay={i * 40}>
+      <div style={{ borderBottom: '1px solid var(--border)' }}>
+        <button onClick={() => setOpen(o => !o)} style={{
+          width: '100%', textAlign: 'left', padding: '20px 0',
+          background: 'none', border: 'none', cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 16
+        }}>
+          <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text1)', lineHeight: 1.5 }}>{f.q}</span>
+          <ChevronRight size={16} style={{
+            color: 'var(--text3)', flexShrink: 0, marginTop: 2,
+            transform: open ? 'rotate(90deg)' : 'rotate(0deg)',
+            transition: 'transform 0.3s'
+          }} />
+        </button>
+        {open && (
+          <div style={{
+            paddingBottom: 20, fontSize: 13, color: 'var(--text2)', lineHeight: 1.8
+          }}>{f.a}</div>
+        )}
+      </div>
+    </FadeUp>
+  )
+}
+
+export default Landing
+
