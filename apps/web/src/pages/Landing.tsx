@@ -11,6 +11,7 @@ import {
   GitBranch, BookOpen,
   GraduationCap, ShieldAlert, Flame, Cpu,
 } from 'lucide-react'
+import { useAuthStore } from '../stores/authStore'
 
 // ─── CSS ─────────────────────────────────────────────────────────────────────
 const CSS = `
@@ -801,6 +802,7 @@ function Ticker() {
 // ─── MAIN ─────────────────────────────────────────────────────────────────────
 export function Landing() {
   const nav = useNavigate()
+  const { logout, isAuthenticated } = useAuthStore()
 
   return (
     <div style={{ background: 'var(--bg)', color: 'var(--text1)', minHeight: '100vh', overflowX: 'hidden' }}>
@@ -824,13 +826,50 @@ export function Landing() {
               className="hidden sm:block"
             >{l}</a>
           ))}
-          <Link to="/editor" style={{
-            padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
-            background: 'var(--indigo)', color: '#fff', transition: 'opacity 0.2s'
-          }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >Open Playground →</Link>
+
+          {isAuthenticated() ? (
+            <>
+              <Link to="/dashboard" style={{ color: 'var(--text3)', transition: 'color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text1)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text3)')}
+              >
+                Dashboard
+              </Link>
+              <button 
+                onClick={logout}
+                style={{
+                  background: 'transparent', border: 'none', color: 'var(--text3)', cursor: 'pointer', transition: 'color 0.2s', fontSize: 13, padding: 0
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text1)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text3)')}
+              >
+                Sign Out
+              </button>
+              <Link to="/editor" style={{
+                padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                background: 'var(--indigo)', color: '#fff', transition: 'opacity 0.2s'
+              }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >Playground →</Link>
+            </>
+          ) : (
+            <>
+              <Link to="/auth" style={{ color: 'var(--text3)', transition: 'color 0.2s' }}
+                onMouseEnter={e => (e.currentTarget.style.color = 'var(--text1)')}
+                onMouseLeave={e => (e.currentTarget.style.color = 'var(--text3)')}
+              >
+                Sign In
+              </Link>
+              <Link to="/auth" state={{ mode: 'register' }} style={{
+                padding: '8px 20px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                background: 'var(--indigo)', color: '#fff', transition: 'opacity 0.2s'
+              }}
+                onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+                onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+              >Sign Up →</Link>
+            </>
+          )}
         </div>
       </nav>
 
