@@ -1,28 +1,31 @@
-# 🌌 ARCHAOS: Cinematic Distributed Systems War Room & Chaos Simulator
+<div align="center">
+  
+  # 🌌 ARCHAOS
+  ### *Cinematic Distributed Systems War Room & Chaos Engineering Sandbox*
 
-[![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-blue.svg)](https://nodejs.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![NestJS](https://img.shields.io/badge/backend-NestJS%2011-red.svg)](https://nestjs.com/)
-[![React](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-blue.svg)](https://react.dev/)
-[![TailwindCSS](https://img.shields.io/badge/styling-Tailwind%204.0-cyan.svg)](https://tailwindcss.com/)
-[![Docker](https://img.shields.io/badge/containers-Docker%20Compose-blue.svg)](https://www.docker.com/)
+  <p align="center">
+    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/node-%3E%3D20.0.0-blue.svg?style=for-the-badge&logo=node.js" alt="Node.js" /></a>
+    <a href="https://nestjs.com/"><img src="https://img.shields.io/badge/backend-NestJS%2011-red.svg?style=for-the-badge&logo=nestjs" alt="NestJS" /></a>
+    <a href="https://react.dev/"><img src="https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-blue.svg?style=for-the-badge&logo=react" alt="React" /></a>
+    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/styling-Tailwind%204.0-cyan.svg?style=for-the-badge&logo=tailwindcss" alt="TailwindCSS" /></a>
+    <a href="https://www.docker.com/"><img src="https://img.shields.io/badge/containers-Docker%20Compose-blue.svg?style=for-the-badge&logo=docker" alt="Docker" /></a>
+    <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License: MIT" /></a>
+  </p>
 
-**Archaos** is an interactive, high-fidelity distributed systems topology designer, failure simulator, and AI-powered chaos engineering classroom. It transforms abstract distributed systems theories—such as cascading failures, retry storms, thundering herds, and split-brain scenarios—into live, visual simulations. Designed with a premium cinematic aesthetic, it serves as a visual "war room" for engineers to design architectures, inject chaos, and learn how to build resilient systems.
+  **Archaos** is an interactive, high-fidelity distributed systems topology designer, failure simulator, and AI-powered chaos engineering playground. It transforms abstract distributed systems theories—such as cascading failures, retry storms, thundering herds, and split-brain scenarios—into live, visual simulations.
+</div>
 
 ---
 
 ## 1. Project Introduction
 
-Archaos is an immersive educational and testing tool designed to help developers visualize, trace, and understand distributed system vulnerabilities. Rather than relying on simple abstract flowcharts or heavy Kubernetes-based clusters, Archaos operates on a real-time, event-driven request simulation engine. 
+Archaos is an immersive educational and testing tool designed to help developers visualize, trace, and understand distributed system vulnerabilities. Rather than relying on simple abstract flowcharts or heavy Kubernetes-based clusters, Archaos operates on a real-time, event-driven request simulation engine.
 
-### Tagline
-> **"Visualizing systemic failure before it takes down production."**
-
-### Core Differentiators
-*   **Request-Level Queue Modeling**: It simulates individual virtual request packets traversing through API Gateways, queues, services, Redis caches, and PostgreSQL connection pools.
-*   **Web Worker Sandboxing**: Offloads high-throughput calculations to a background HTML5 Web Worker thread, keeping the UI smooth (60 FPS) even when processing thousands of virtual RPS.
-*   **Interactive Incident Narration**: Integrates LLMs (OpenRouter/OpenAI API) to provide streaming audio-visual commentary on active failure cascades, explaining cause, effect, and mitigation techniques in real-time.
-*   **Cinematic "War Room" Design**: Replaces boring enterprise dashboards with a sleek, glowing dark-mode UI with customizable canvas node configurations.
+### Why Archaos?
+In traditional architectures, understanding failure modes (like cascading downstream bottlenecks or split-brain replication failures) requires either reading dry theoretical documentation or staging heavy infrastructure tests that disrupt work. Archaos bridges this gap:
+*   **Systemic Clarity**: It models request packages as physical entities traversing paths on a drag-and-drop node canvas.
+*   **Frictionless Execution**: Zero dependencies on real Kubernetes clusters or VMs. Runs entirely in local web workers, providing immediate feedback.
+*   **Cinematic Engineering UI**: Sleek dark void theme, grid coordinate layouts, cursor dot tracers, CRT scanlines, and glow filters to capture the atmosphere of a real incident command center.
 
 ---
 
@@ -30,34 +33,35 @@ Archaos is an immersive educational and testing tool designed to help developers
 
 | Capability | Archaos Sandbox | Chaos Mesh / Gremlin | Static Diagrams (draw.io) |
 | :--- | :--- | :--- | :--- |
-| **Instant Interactive Editor** | **Yes** (Drag-and-drop nodes & configure properties) | No (Requires writing YAML/CRD configuration files) | Yes (But shapes are purely static) |
-| **Real-time Queue Simulation**| **Yes** (Queue bounds, processing times, backpressure) | No (Injects failures at the VM/container resource level) | No |
-| **AI Narrative & Predictions**  | **Yes** (Streaming causal analysis and metrics to watch) | No | No |
-| **Multiplayer Incident Rooms** | **Yes** (Collaborative Socket.io Incident rooms) | No | No |
-| **Guided Educational Scenarios** | **Yes** (Built-in walkthroughs and interactive check-ins) | No | No |
-| **Setup & Run Overhead** | **None** (Launches instantly locally or in the browser) | High (Requires Kubernetes cluster and admin access) | None |
+| **Instant Interactive Editor** | **Yes** (Real-time visual node grid) | No (Requires Kubernetes config files) | Yes (But shapes are purely static) |
+| **Request Queue Simulation** | **Yes** (Queue bounds & processing limits) | No (Focuses on container resource limits) | No |
+| **Live AI Causal Analysis** | **Yes** (Streaming commentary of failure states) | No | No |
+| **Multiplayer Incident Rooms** | **Yes** (Collaborative sync via Socket.io) | No | No |
+| **Interactive Walkthroughs** | **Yes** (Built-in educational checkpoints) | No | No |
+| **Client-Side Simulation Isolation** | **Yes** (Background HTML5 Web Worker) | No (Must execute in real environments) | N/A (No active simulation) |
+| **Memory Profiling & Leaks** | **Yes** (Simulated memory drift & OOM states) | No | No |
 
 ---
 
 ## 3. Architecture Overview
 
-Archaos is structured as a TypeScript monorepo workspace for clean isolation of frontend components and backend API services:
+Archaos is designed as a TypeScript monorepo workspace for clean segregation of interests:
 
 ```
 archaos/
 ├── apps/
-│   ├── web/                    # Frontend React 19 Application
-│   │   ├── public/             # Static configurations, sitemaps, and robots.txt
+│   ├── web/                    # React 19 Frontend Web Application
+│   │   ├── public/             # Static sitemaps, robots.txt, and configurations
 │   │   └── src/
 │   │       ├── components/     # UI layouts, Navbars, and React Flow Canvas wrappers
-│   │       ├── hooks/          # React hooks (simulation managers, Web Worker listeners)
+│   │       ├── hooks/          # React hooks (simulation managers, worker listeners)
 │   │       ├── lib/            # Axios API wrappers and Supabase connection clients
 │   │       ├── pages/          # Landing, Dashboard, Auth, Editor, Learn, Scenarios
 │   │       ├── stores/         # Zustand state containers (Auth, Canvas, SimStates)
-│   │       ├── types/          # Shared type safety constraints for Topologies and Simulators
+│   │       ├── types/          # Shared type safety constraints for Topologies & Simulators
 │   │       └── workers/        # Discrete Event Loop Simulation Web Worker
 │   │
-│   └── api/                    # Backend NestJS HTTP and WebSocket Server
+│   └── api/                    # NestJS REST and WebSocket Server
 │       ├── prisma/             # Schema definitions, migrations, and seeds
 │       └── src/
 │           ├── modules/        # Domain-driven NestJS modules
@@ -78,26 +82,12 @@ archaos/
 
 ## 4. AI Capabilities
 
-Archaos features a real-time **AI Incident Narrator** that watches the active simulation canvas and explains systemic failures to users.
+Archaos includes a live **AI Incident Narrator** that watches the active simulation canvas and explains systemic failures to users.
 
 ### How It Works:
-```
-+------------------+     Simulation Events      +-------------------+
-|  Vite Web Client | -------------------------> | NestJS WS Gateway |
-|  (Canvas State)  |                            | (narration.gw)    |
-+------------------+                            +-------------------+
-                                                          |
-                                                          | (Event + Topology payload)
-                                                          v
-+------------------+    Fallback Completion     +-------------------+
-| Offline Fallback | <------------------------- |   OpenRouter API  |
-| Narrative Engine |                            | (GPT-4 / Moonshot)|
-+------------------+                            +-------------------+
-```
-
 1. **Event Capture**: When a node changes health states (e.g., transitions from `HEALTHY` to `DEGRADED` or `FAILED`) or an edge trips its circuit breaker, an event payload is dispatched.
 2. **WebSocket Pipeline**: The payload is piped through the `/narration` WebSocket namespace.
-3. **OpenRouter streaming**: The backend formats a custom prompt containing the exact JSON topology and active metrics, then invokes OpenRouter's model API (`openai/gpt-oss-120b` with a failover to `moonshotai/kimi-k2.6`).
+3. **OpenRouter Streaming**: The backend formats a custom prompt containing the exact JSON topology and active metrics, then invokes OpenRouter's model API (`openai/gpt-oss-120b` with a failover to `moonshotai/kimi-k2.6`).
 4. **Structured JSON Streaming**: The prompt instructs the model to stream back a JSON payload:
    ```json
    {
@@ -138,7 +128,7 @@ npm install
 ```
 
 #### 2. Configure Environment Variables
-Copy and update variables for the backend:
+Create the root `.env` configuration file:
 ```bash
 cp .env.example .env
 ```
@@ -150,7 +140,7 @@ JWT_SECRET="generate-a-strong-32-character-secret"
 OPENAI_API_KEY="sk-..."  # Provide OpenAI or OpenRouter Key
 ```
 
-Copy and update variables for the frontend:
+Create the frontend configuration file:
 ```bash
 cp apps/web/.env.example apps/web/.env
 ```
@@ -334,7 +324,7 @@ Run commands from the root repository directory:
 | `npm run dev:api` | `apps/api` | Launches NestJS server in watch mode. |
 | `npm run build` | Root Monorepo | Compiles both API and Web code for production. |
 | `npm run docker:up` | Root Monorepo | Boots postgres (5433) and redis (6380) locally. |
-| `npm run docker:down`| Root Monorepo | Shuts down backend database containers. |
+| `npm run docker:down`| Root Monorepo | Shuts down database and cache containers. |
 | `npx prisma migrate dev` | `apps/api` | Runs migration commands to sync local database. |
 | `npx prisma db seed` | `apps/api` | Populates database with default system scenarios. |
 
@@ -422,11 +412,12 @@ REST endpoints are exposed on `http://localhost:5000/api`.
    ```bash
    git checkout -b feat/my-amazing-feature
    ```
-4. Commit your changes:
+4. Write clean, modular, and type-safe code. Add comments for complex routing mathematics.
+5. Commit your changes:
    ```bash
    git commit -m "feat: add sliding window latency metrics to UI panel"
    ```
-5. Push to your branch and open a Pull Request.
+6. Push to your branch and open a Pull Request.
 
 ---
 
