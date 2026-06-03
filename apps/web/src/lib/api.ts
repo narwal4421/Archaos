@@ -1,4 +1,5 @@
 import { useAuthStore } from '../stores/authStore'
+import type { Topology, Scenario, NodeConfig, EdgeConfig } from '../types/topology'
 
 const BASE_URL = '/api'
 
@@ -17,7 +18,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   })
 
   if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
+    const errorData = (await response.json().catch(() => ({}))) as { message?: string }
     throw new Error(errorData.message || `Request failed with status ${response.status}`)
   }
 
@@ -38,37 +39,37 @@ export const api = {
       }),
   },
   topologies: {
-    list: () => request<any[]>('/topologies'),
-    get: (id: string) => request<any>(`/topologies/${id}`),
-    create: (data: any) =>
-      request<any>('/topologies', {
+    list: () => request<Topology[]>('/topologies'),
+    get: (id: string) => request<Topology>(`/topologies/${id}`),
+    create: (data: Omit<Topology, 'id'>) =>
+      request<Topology>('/topologies', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
-    update: (id: string, data: any) =>
-      request<any>(`/topologies/${id}`, {
+    update: (id: string, data: Partial<Topology>) =>
+      request<Topology>(`/topologies/${id}`, {
         method: 'PATCH',
         body: JSON.stringify(data),
       }),
     delete: (id: string) =>
-      request<any>(`/topologies/${id}`, {
+      request<void>(`/topologies/${id}`, {
         method: 'DELETE',
       }),
   },
   scenarios: {
-    list: () => request<any[]>('/scenarios'),
-    get: (id: string) => request<any>(`/scenarios/${id}`),
+    list: () => request<Scenario[]>('/scenarios'),
+    get: (id: string) => request<Scenario>(`/scenarios/${id}`),
   },
   sessions: {
-    create: (data: any) =>
-      request<any>('/sessions', {
+    create: (data: { topologyId?: string; scenarioId?: string }) =>
+      request<{ id: string }>('/sessions', {
         method: 'POST',
         body: JSON.stringify(data),
       }),
   },
   blast: {
-    analyze: (data: { nodes: any[]; edges: any[]; rootNodeId: string }) =>
-      request<any>('/blast/analyze', {
+    analyze: (data: { nodes: NodeConfig[]; edges: EdgeConfig[]; rootNodeId: string }) =>
+      request<unknown>('/blast/analyze', {
         method: 'POST',
         body: JSON.stringify(data),
       }),

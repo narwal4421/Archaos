@@ -9,6 +9,8 @@ async function bootstrap() {
       'http://localhost:5173',
       'http://localhost:3000',
       'https://archaos.vercel.app',
+      'https://archaos-tau.vercel.app',
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
     ],
     credentials: true,
   });
@@ -19,4 +21,4 @@ async function bootstrap() {
   await app.listen(port);
   console.log(`🚀 Archaos API running on http://localhost:${port}/api`);
 }
-bootstrap();
+void bootstrap();

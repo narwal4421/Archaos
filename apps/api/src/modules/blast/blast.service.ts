@@ -1,7 +1,18 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
-interface BlastRadiusResult {
+export interface TopologyNode {
+  id: string;
+}
+
+export interface TopologyEdge {
+  sourceId: string;
+  targetId: string;
+  weight?: number;
+  circuitBreakerEnabled?: boolean | string;
+}
+
+export interface BlastRadiusResult {
   rootNodeId: string;
   affectedNodes: {
     nodeId: string;
@@ -18,17 +29,20 @@ interface BlastRadiusResult {
 export class BlastService {
   constructor(private prisma: PrismaService) {}
 
-  async calculateBlastRadius(nodeId: string, topologyId: string): Promise<BlastRadiusResult> {
-    let topology = await this.prisma.topology.findUnique({
+  async calculateBlastRadius(
+    nodeId: string,
+    topologyId: string,
+  ): Promise<BlastRadiusResult> {
+    const topology = await this.prisma.topology.findUnique({
       where: { id: topologyId },
     });
 
-    let nodes: any[] = [];
-    let edges: any[] = [];
+    let nodes: TopologyNode[] = [];
+    let edges: TopologyEdge[] = [];
 
     if (topology) {
-      nodes = topology.nodesJson as any[];
-      edges = topology.edgesJson as any[];
+      nodes = (topology.nodesJson ?? []) as unknown as TopologyNode[];
+      edges = (topology.edgesJson ?? []) as unknown as TopologyEdge[];
     } else {
       const scenario = await this.prisma.scenario.findUnique({
         where: { id: topologyId },
@@ -36,31 +50,41 @@ export class BlastService {
       if (!scenario) {
         throw new NotFoundException('Topology or Scenario not found');
       }
-      nodes = scenario.nodesJson as any[];
-      edges = scenario.edgesJson as any[];
+      nodes = (scenario.nodesJson ?? []) as unknown as TopologyNode[];
+      edges = (scenario.edgesJson ?? []) as unknown as TopologyEdge[];
     }
 
     return this.calculateBlastRadiusFromData(nodes, edges, nodeId);
   }
 
-  async calculateBlastRadiusFromData(nodes: any[], edges: any[], rootNodeId: string): Promise<BlastRadiusResult> {
-    const targetNode = nodes.find(n => n.id === rootNodeId);
+  calculateBlastRadiusFromData(
+    nodes: TopologyNode[],
+    edges: TopologyEdge[],
+    rootNodeId: string,
+  ): BlastRadiusResult {
+    const targetNode = nodes.find((n) => n.id === rootNodeId);
     if (!targetNode) {
       throw new NotFoundException('Node not found in topology');
     }
 
-    const getTotalInboundWeight = (nodeIdStr: string, edgesList: any[]) => {
-      const inbound = edgesList.filter(e => e.targetId === nodeIdStr);
+    const getTotalInboundWeight = (
+      nodeIdStr: string,
+      edgesList: TopologyEdge[],
+    ) => {
+      const inbound = edgesList.filter((e) => e.targetId === nodeIdStr);
       if (inbound.length === 0) return 1;
       return inbound.reduce((sum, e) => sum + (e.weight ?? 1), 0);
     };
 
-    const visited = new Map<string, { depth: number; trafficPercent: number }>();
+    const visited = new Map<
+      string,
+      { depth: number; trafficPercent: number }
+    >();
     const queue = [{ nodeId: rootNodeId, depth: 0, trafficPercent: 100 }];
 
     while (queue.length > 0) {
       const { nodeId: current, depth, trafficPercent } = queue.shift()!;
-      
+
       if (visited.has(current)) {
         const prev = visited.get(current)!;
         if (prev.trafficPercent >= trafficPercent) {
@@ -69,14 +93,15 @@ export class BlastService {
       }
 
       if (depth > 5) continue;
-      
+
       visited.set(current, { depth, trafficPercent });
 
-      const inboundEdges = edges.filter(e => e.targetId === current);
+      const inboundEdges = edges.filter((e) => e.targetId === current);
       for (const edge of inboundEdges) {
         const totalWeight = getTotalInboundWeight(current, edges);
         const edgeWeight = edge.weight ?? 1;
-        const upstreamTrafficPercent = trafficPercent * (edgeWeight / totalWeight);
+        const upstreamTrafficPercent =
+          trafficPercent * (edgeWeight / totalWeight);
         queue.push({
           nodeId: edge.sourceId,
           depth: depth + 1,
@@ -84,7 +109,7 @@ export class BlastService {
         });
       }
 
-      const outboundEdges = edges.filter(e => e.sourceId === current);
+      const outboundEdges = edges.filter((e) => e.sourceId === current);
       for (const edge of outboundEdges) {
         queue.push({
           nodeId: edge.targetId,
@@ -101,7 +126,10 @@ export class BlastService {
       else if (data.depth <= 3) riskLevel = 'MEDIUM';
 
       const isProtectedByCircuitBreaker = edges.some(
-        e => e.targetId === id && (e.circuitBreakerEnabled === true || e.circuitBreakerEnabled === 'true')
+        (e) =>
+          e.targetId === id &&
+          (e.circuitBreakerEnabled === true ||
+            e.circuitBreakerEnabled === 'true'),
       );
 
       return {
@@ -116,8 +144,9 @@ export class BlastService {
     const totalAffectedTrafficPercent = Math.round(
       Math.min(
         100,
-        affectedNodes.reduce((sum, n) => sum + n.trafficPercent, 0) / Math.max(1, affectedNodes.length)
-      )
+        affectedNodes.reduce((sum, n) => sum + n.trafficPercent, 0) /
+          Math.max(1, affectedNodes.length),
+      ),
     );
 
     const criticalPaths = this.findCriticalPaths(rootNodeId, edges);
@@ -130,10 +159,13 @@ export class BlastService {
     };
   }
 
-  private findCriticalPaths(startId: string, edges: any[]): string[][] {
+  private findCriticalPaths(
+    startId: string,
+    edges: TopologyEdge[],
+  ): string[][] {
     const paths: string[][] = [];
     const traverse = (currentId: string, currentPath: string[]) => {
-      const nextEdges = edges.filter(e => e.sourceId === currentId);
+      const nextEdges = edges.filter((e) => e.sourceId === currentId);
       if (nextEdges.length === 0) {
         paths.push(currentPath);
         return;
@@ -148,7 +180,7 @@ export class BlastService {
     };
     try {
       traverse(startId, [startId]);
-    } catch (e) {
+    } catch {
       // Catch circular loops
     }
     return paths.sort((a, b) => b.length - a.length).slice(0, 3);

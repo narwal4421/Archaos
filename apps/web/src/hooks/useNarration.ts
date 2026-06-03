@@ -23,6 +23,10 @@ export function useNarration(sessionId: string) {
       appendToken(token)
     })
 
+    socket.on('narration:model', ({ model }: { model: string }) => {
+      useNarrationStore.getState().setModelUsed(model)
+    })
+
     socket.on('narration:done', ({ concept, prediction, watchFor }: { concept?: string; prediction?: string; watchFor?: string }) => {
       finishStreaming(concept || 'System Event', prediction || '', watchFor || '')
     })
@@ -34,7 +38,7 @@ export function useNarration(sessionId: string) {
     socketRef.current = socket
 
     return () => { socket.disconnect() }
-  }, [sessionId])
+  }, [sessionId, appendToken, finishStreaming])
 
   const sendEvent = (event: SimEvent, state: SimulationState, topology: unknown) => {
     if (!socketRef.current?.connected) return

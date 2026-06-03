@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath } from '@xyflow/react'
 import { useSimulationStore } from '../../../stores/simulationStore'
+import type { SimulationStore } from '../../../stores/simulationStore'
 import type { CircuitBreakerState } from '../../../types/simulation'
 
 const edgeColorByState = (errorRate: number, cbState: CircuitBreakerState, isPartitioned: boolean) => {
@@ -18,14 +19,14 @@ interface AnimatedEdgeProps {
   sourceY: number
   targetX: number
   targetY: number
-  data?: any
+  data?: unknown
   markerEnd?: string
 }
 
 export const AnimatedEdge = memo(({
   id, sourceX, sourceY, targetX, targetY, markerEnd
 }: AnimatedEdgeProps) => {
-  const edgeState = useSimulationStore((s: any) => s.simState.edges[id])
+  const edgeState = useSimulationStore((s: SimulationStore) => s.simState.edges[id])
   const error = edgeState?.errorRatePercent ?? 0
   const cbState = edgeState?.circuitBreakerState ?? 'CLOSED'
   const isPartitioned = edgeState?.isPartitioned ?? false
@@ -85,10 +86,3 @@ export const AnimatedEdge = memo(({
     </>
   )
 })
-
-export const edgeTypes = {
-  http:          AnimatedEdge,
-  grpc:          AnimatedEdge,
-  message:       AnimatedEdge,
-  database_conn: AnimatedEdge,
-}

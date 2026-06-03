@@ -11,7 +11,7 @@ export function EdgeConfigPanel() {
   const config = edgeConfigs[selectedEdgeId]
   if (!config) return null
 
-  const handleUpdate = (field: string, val: any) => {
+  const handleUpdate = (field: string, val: unknown) => {
     setEdgeConfig(selectedEdgeId, { [field]: val })
   }
 

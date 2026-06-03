@@ -13,7 +13,7 @@ export function NodeConfigPanel() {
   const config = nodeConfigs[selectedNodeId]
   if (!config) return null
 
-  const handleUpdate = (field: string, val: any) => {
+  const handleUpdate = (field: string, val: unknown) => {
     setNodeConfig(selectedNodeId, { [field]: val })
   }
 

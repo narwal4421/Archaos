@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useSimulationStore } from '../stores/simulationStore'
 import { useCanvasStore } from '../stores/canvasStore'
+import { useNarrationStore } from '../stores/narrationStore'
 import type { ChaosAction, TrafficProfile } from '../types/simulation'
 import type { NodeConfig, EdgeConfig } from '../types/topology'
 
@@ -18,7 +19,22 @@ export function useSimulation() {
     worker.onmessage = (e) => {
       const { type, state, event } = e.data
       if (type === 'TICK') applyTick(state)
-      if (type === 'EVENT') appendEvent(event)
+      if (type === 'EVENT') {
+        appendEvent(event)
+        
+        // Auto-confirm prediction if event matches watchFor
+        const { currentEntry, confirmPrediction } = useNarrationStore.getState()
+        if (
+          currentEntry &&
+          !currentEntry.predictionConfirmed &&
+          currentEntry.watchFor &&
+          (event.nodeId === currentEntry.watchFor ||
+           event.edgeId === currentEntry.watchFor ||
+           event.message?.toLowerCase().includes(currentEntry.watchFor.toLowerCase()))
+        ) {
+          confirmPrediction(currentEntry.id)
+        }
+      }
     }
 
     workerRef.current = worker

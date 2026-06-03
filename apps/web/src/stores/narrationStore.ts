@@ -6,11 +6,13 @@ interface NarrationStore {
   isStreaming: boolean
   streamBuffer: string
   currentEntry: NarrationEntry | null
+  modelUsed: string | null
 
   startStreaming: () => void
   appendToken: (token: string) => void
   finishStreaming: (concept: string, prediction: string, watchFor: string) => void
   confirmPrediction: (entryId: string) => void
+  setModelUsed: (model: string | null) => void
   clear: () => void
 }
 
@@ -19,8 +21,9 @@ export const useNarrationStore = create<NarrationStore>((set, get) => ({
   isStreaming: false,
   streamBuffer: '',
   currentEntry: null,
+  modelUsed: null,
 
-  startStreaming: () => set({ isStreaming: true, streamBuffer: '' }),
+  startStreaming: () => set({ isStreaming: true, streamBuffer: '', modelUsed: null }),
 
   appendToken: (token) =>
     set((s) => ({ streamBuffer: s.streamBuffer + token })),
@@ -60,11 +63,14 @@ export const useNarrationStore = create<NarrationStore>((set, get) => ({
       ),
     })),
 
+  setModelUsed: (model) => set({ modelUsed: model }),
+
   clear: () =>
     set({
       entries: [],
       isStreaming: false,
       streamBuffer: '',
       currentEntry: null,
+      modelUsed: null,
     }),
 }))

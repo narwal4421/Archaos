@@ -10,11 +10,7 @@ import type {
   ChaosAction,
 } from '../types/simulation'
 
-// ============================================================
-// PRIORITY QUEUE
-// ============================================================
-/*
-class PriorityQueue<T extends { time: number }> {
+export class PriorityQueue<T extends { time: number }> {
   private heap: T[] = []
 
   push(item: T) {
@@ -58,7 +54,6 @@ class PriorityQueue<T extends { time: number }> {
     }
   }
 }
-*/
 
 // ============================================================
 // NODE STATE MACHINE
@@ -328,6 +323,11 @@ class SimulationEngine {
   private intervalId: ReturnType<typeof setInterval> | null = null
   private adjacency = new Map<string, string[]>()
   private edgeLookup = new Map<string, EdgeConfig>()
+  private scheduledEvents: Array<{ timeSec: number; action: ChaosAction }> = []
+
+  scheduleEvent(timeSec: number, action: ChaosAction) {
+    this.scheduledEvents.push({ timeSec, action })
+  }
 
   initialize(topology: { nodes: NodeConfig[]; edges: EdgeConfig[] }, traffic: TrafficProfile) {
     this.topology = topology
@@ -407,7 +407,7 @@ class SimulationEngine {
       case 'TRAFFIC_SPIKE':
         this.trafficProfile = { ...this.trafficProfile, baseRps: this.trafficProfile.baseRps * (action.value ?? 10) }
         break
-      case 'CACHE_EXPIRE':
+      case 'CACHE_EXPIRE': {
         const dbNode = this.nodes.get(action.targetId)
         if (dbNode) {
           for (let i = 0; i < 80; i++) {
@@ -415,7 +415,8 @@ class SimulationEngine {
           }
         }
         break
-      case 'RECOVER_NODE' as any:
+      }
+      case 'RECOVER_NODE' as unknown as ChaosAction['type']:
         if (node) {
           node.recover()
           node.isLeakingMemory = false
@@ -435,6 +436,12 @@ class SimulationEngine {
 
   private tick() {
     this.currentTimeSec += (this.tickIntervalMs / 1000) * this.speedMultiplier
+
+    this.scheduledEvents
+      .filter(e => e.timeSec <= this.currentTimeSec)
+      .forEach(e => this.injectChaos(e.action))
+    this.scheduledEvents = this.scheduledEvents.filter(e => e.timeSec > this.currentTimeSec)
+
     this.routeTraffic()
 
     this.nodes.forEach((node) => {
@@ -574,13 +581,15 @@ class SimulationEngine {
     switch (pattern) {
       case 'CONSTANT':   return baseRps
       case 'SINUSOIDAL': return baseRps * (0.5 + 0.5 * Math.sin(this.currentTimeSec * 0.1))
-      case 'SPIKE':
+      case 'SPIKE': {
         const spikeAt = 60
         return this.currentTimeSec > spikeAt && this.currentTimeSec < spikeAt + 30
           ? baseRps * (spikeMultiplier ?? 10) : baseRps
-      case 'RAMP':
+      }
+      case 'RAMP': {
         const p = Math.min(1, this.currentTimeSec / (rampDurationSecs ?? 120))
         return baseRps + p * ((rampTargetRps ?? baseRps * 5) - baseRps)
+      }
       default: return baseRps
     }
   }
@@ -640,5 +649,8 @@ self.onmessage = (event: MessageEvent) => {
     case 'SET_SPEED':   engine.setSpeed(payload.multiplier); break
     case 'SET_TRAFFIC': engine.setTraffic(payload.profile); break
     case 'INJECT_CHAOS': engine.injectChaos(payload.action); break
+    case 'SCHEDULE_CHAOS':
+      engine.scheduleEvent(payload.timeSec, payload.action)
+      break
   }
 }

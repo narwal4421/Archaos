@@ -6,9 +6,16 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { nodeTypes } from './nodes'
-import { edgeTypes } from './edges'
+import { AnimatedEdge } from './edges'
 import { useCanvasStore } from '../../stores/canvasStore'
 import type { NodeConfig, NodeType } from '../../types/topology'
+
+const edgeTypes = {
+  http: AnimatedEdge,
+  grpc: AnimatedEdge,
+  message: AnimatedEdge,
+  database_conn: AnimatedEdge,
+}
 
 let idCounter = 1
 const genId = () => `node-${idCounter++}`

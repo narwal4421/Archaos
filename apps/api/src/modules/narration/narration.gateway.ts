@@ -43,6 +43,8 @@ interface DemoNarration {
       'http://localhost:5173',
       'http://localhost:3000',
       'https://archaos.vercel.app',
+      'https://archaos-tau.vercel.app',
+      ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
     ],
     credentials: true,
   },
@@ -56,6 +58,7 @@ export class NarrationGateway
 
   private getOpenAIClient(): OpenAI | null {
     const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY;
+    console.log('API key present:', !!apiKey);
     if (!apiKey) return null;
     return new OpenAI({
       apiKey,

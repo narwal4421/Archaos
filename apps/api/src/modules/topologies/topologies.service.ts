@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class TopologiesService {
@@ -22,7 +23,15 @@ export class TopologiesService {
     return topology;
   }
 
-  async create(userId: string, data: { name: string; description?: string; nodesJson: any; edgesJson: any }) {
+  async create(
+    userId: string,
+    data: {
+      name: string;
+      description?: string;
+      nodesJson: Prisma.InputJsonValue;
+      edgesJson: Prisma.InputJsonValue;
+    },
+  ) {
     return this.prisma.topology.create({
       data: {
         userId,
@@ -34,7 +43,17 @@ export class TopologiesService {
     });
   }
 
-  async update(id: string, userId: string, data: { name?: string; description?: string; nodesJson?: any; edgesJson?: any; isPublic?: boolean }) {
+  async update(
+    id: string,
+    userId: string,
+    data: {
+      name?: string;
+      description?: string;
+      nodesJson?: Prisma.InputJsonValue;
+      edgesJson?: Prisma.InputJsonValue;
+      isPublic?: boolean;
+    },
+  ) {
     await this.findOne(id, userId);
     return this.prisma.topology.update({
       where: { id },

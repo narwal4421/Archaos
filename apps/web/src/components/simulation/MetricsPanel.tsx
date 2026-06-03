@@ -11,7 +11,8 @@ export function MetricsPanel() {
 
   useEffect(() => {
     if (simState.status === 'IDLE') {
-      setHistory([])
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHistory(prev => (prev.length === 0 ? prev : []))
       return
     }
     if (simState.status === 'RUNNING') {

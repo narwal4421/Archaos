@@ -8,6 +8,8 @@ import { useEffect, useState, useRef, useCallback } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useCanvasStore } from '../stores/canvasStore'
 import { useSimulation } from '../hooks/useSimulation'
+import { useNarration } from '../hooks/useNarration'
+import { useSimulationStore } from '../stores/simulationStore'
 import { CanvasWrapper } from '../components/canvas/CanvasWrapper'
 import { SimControls } from '../components/simulation/SimControls'
 import { MetricsPanel } from '../components/simulation/MetricsPanel'
@@ -54,17 +56,19 @@ const SCENARIO_BLUEPRINTS: Record<string, { nodes: NodeConfig[]; edges: EdgeConf
       { id: 'gateway-service', type: 'SERVICE', label: 'Gateway Service', x: 280, y: 250, replicas: 2, processingTimeMs: 30 },
       { id: 'order-service', type: 'SERVICE', label: 'Order Service', x: 480, y: 160, replicas: 2, processingTimeMs: 40 },
       { id: 'user-service', type: 'SERVICE', label: 'User Service', x: 480, y: 340, replicas: 2, processingTimeMs: 40 },
-      { id: 'payment-service', type: 'SERVICE', label: 'Payment Service', x: 680, y: 220, replicas: 1, processingTimeMs: 60 },
+      { id: 'inventory-service', type: 'SERVICE', label: 'Inventory Service', x: 680, y: 100, replicas: 1, processingTimeMs: 30 },
+      { id: 'payment-service', type: 'SERVICE', label: 'Payment Service', x: 680, y: 280, replicas: 1, processingTimeMs: 60 },
       { id: 'billing-service', type: 'SERVICE', label: 'Billing Service', x: 880, y: 280, replicas: 1, processingTimeMs: 40 },
-      { id: 'postgres-db', type: 'DATABASE', label: 'PostgreSQL DB', x: 1060, y: 280, dbType: 'POSTGRESQL', connectionPoolSize: 20 },
+      { id: 'postgres-db', type: 'DATABASE', label: 'PostgreSQL DB', x: 1060, y: 280, dbType: 'POSTGRESQL', connectionPoolSize: 20 }
     ],
     edges: [
-      { id: 'e1', type: 'HTTP', sourceId: 'api-gateway', targetId: 'gateway-service' },
-      { id: 'e2', type: 'HTTP', sourceId: 'gateway-service', targetId: 'order-service', timeoutMs: 1000, circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
-      { id: 'e3', type: 'HTTP', sourceId: 'gateway-service', targetId: 'user-service' },
-      { id: 'e4', type: 'HTTP', sourceId: 'order-service', targetId: 'payment-service', timeoutMs: 1000, circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
-      { id: 'e5', type: 'HTTP', sourceId: 'payment-service', targetId: 'billing-service', timeoutMs: 1000, circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
-      { id: 'e6', type: 'DATABASE_CONN', sourceId: 'billing-service', targetId: 'postgres-db' },
+      { id: 'e1', type: 'HTTP', sourceId: 'api-gateway', targetId: 'gateway-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e2', type: 'HTTP', sourceId: 'gateway-service', targetId: 'order-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e3', type: 'HTTP', sourceId: 'gateway-service', targetId: 'user-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e4', type: 'HTTP', sourceId: 'order-service', targetId: 'inventory-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e5', type: 'HTTP', sourceId: 'order-service', targetId: 'payment-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e6', type: 'HTTP', sourceId: 'payment-service', targetId: 'billing-service', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
+      { id: 'e7', type: 'DATABASE_CONN', sourceId: 'billing-service', targetId: 'postgres-db', circuitBreakerEnabled: true, cbErrorThresholdPercent: 30, cbHalfOpenAfterSecs: 15 },
     ],
   },
   'the-retry-storm': {
@@ -407,6 +411,30 @@ export function Editor() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { loadTopology, topologyName, setTopologyName, reset: resetCanvas } = useCanvasStore()
   const { reset: resetSim } = useSimulation()
+
+  const sessionId = useRef(Math.random().toString(36).slice(2)).current
+  const { sendEvent } = useNarration(sessionId)
+  const simState = useSimulationStore(s => s.simState)
+  const canvasStore = useCanvasStore()
+
+  useEffect(() => {
+    const eventLog = simState.eventLog
+    if (eventLog.length === 0) return
+    const latestEvent = eventLog[0]
+    
+    // Only send events that warrant narration
+    if (
+      latestEvent.type === 'NODE_STATE_CHANGE' ||
+      latestEvent.type === 'CIRCUIT_BREAKER' ||
+      latestEvent.type === 'CHAOS_INJECTED'
+    ) {
+      const topology = {
+        nodes: Object.values(canvasStore.nodeConfigs),
+        edges: Object.values(canvasStore.edgeConfigs),
+      }
+      sendEvent(latestEvent, simState, topology)
+    }
+  }, [simState.eventLog, canvasStore.nodeConfigs, canvasStore.edgeConfigs, sendEvent, simState])
 
   const [isEditingName, setIsEditingName] = useState(false)
   const [mounted, setMounted] = useState(false)

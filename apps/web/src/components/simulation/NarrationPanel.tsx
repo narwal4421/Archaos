@@ -14,7 +14,7 @@ const CONCEPT_COLORS: Record<string, string> = {
 }
 
 export function NarrationPanel() {
-  const { isStreaming, streamBuffer, currentEntry } = useNarrationStore()
+  const { isStreaming, streamBuffer, currentEntry, modelUsed } = useNarrationStore()
 
   const displayText = isStreaming
     ? (() => {
@@ -37,10 +37,24 @@ export function NarrationPanel() {
           <Brain size={12} className="text-[#7C3AED]" />
           AI Narration
         </span>
-        <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/20">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-          LIVE
-        </span>
+        <div className="flex items-center gap-2">
+          {modelUsed && (
+            <span style={{
+              fontSize: 8,
+              fontFamily: 'JetBrains Mono',
+              padding: '1px 5px',
+              borderRadius: 3,
+              border: `1px solid ${modelUsed.includes('kimi') ? '#F59E0B44' : '#2D3748'}`,
+              color: modelUsed.includes('kimi') ? '#F59E0B' : '#8B95A3',
+            }}>
+              {modelUsed.includes('kimi') ? 'Kimi K2.6 (fallback)' : 'GPT-OSS-120B'}
+            </span>
+          )}
+          <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+            LIVE
+          </span>
+        </div>
       </div>
 
       {/* Narrative & Prediction body */}
