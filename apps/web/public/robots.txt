@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Allow: /editor
+Allow: /scenarios
+Allow: /learn/*
+
+Sitemap: https://archaos-tau.vercel.app/sitemap.xml

@@ -33,6 +33,67 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Structured Data (JSON-LD) for Rich Search Snippets -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://archaos-tau.vercel.app/#software",
+          "name": "Archaos",
+          "url": "https://archaos-tau.vercel.app/",
+          "applicationCategory": "DeveloperApplication",
+          "operatingSystem": "Web Browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0.00",
+            "priceCurrency": "USD"
+          },
+          "description": "An interactive, real-time flight simulator for distributed systems and system design interview preparation. Design topologies, inject chaos engineering failures, and analyze blast radius with automated AI streaming narration.",
+          "featureList": [
+            "Drag-and-Drop Topology Builder",
+            "Real-Time Chaos Injection (CPU spikes, network partitions, cache stamps)",
+            "Sliding-Window Circuit Breakers",
+            "Backpressure and Queue Simulation",
+            "GPT-Powered Real-Time Incidents Narration",
+            "Blast Radius Calculation and Visualization"
+          ]
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://archaos-tau.vercel.app/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is Archaos?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Archaos is a visual, interactive simulator built to help developers and systems engineers learn distributed systems concepts and prepare for system design interviews by simulating real production failure modes."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does chaos engineering simulation work in Archaos?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Archaos runs an event-driven simulation in a Web Worker at 10Hz. Users can actively inject faults like CPU spikes, network latency, partition failures, OOM kills, and queue congestion on any node/edge and visualize the cascading impacts in real-time."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Can I use Archaos for System Design Interview Prep?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes. Archaos includes 8 guided failure scenarios modeling real outages from companies like Netflix, GitHub, and Uber, with prediction questions and AI-generated narration to build strong engineering intuition."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>
