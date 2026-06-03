@@ -7,13 +7,22 @@
 [![TailwindCSS](https://img.shields.io/badge/styling-Tailwind%204.0-cyan.svg)](https://tailwindcss.com/)
 [![Docker](https://img.shields.io/badge/containers-Docker%20Compose-blue.svg)](https://www.docker.com/)
 
-**Archaos** is an interactive, high-fidelity distributed systems topology designer, failure simulator, and AI-powered chaos engineering playground. It transforms abstract distributed systems theories—such as cascading failures, retry storms, thundering herds, and split-brain scenarios—into live, visual simulations. Designed with a premium cinematic aesthetic, it serves as a visual "war room" for engineers to design architectures, inject chaos, and learn how to build resilient systems.
+**Archaos** is an interactive, high-fidelity distributed systems topology designer, failure simulator, and AI-powered chaos engineering classroom. It transforms abstract distributed systems theories—such as cascading failures, retry storms, thundering herds, and split-brain scenarios—into live, visual simulations. Designed with a premium cinematic aesthetic, it serves as a visual "war room" for engineers to design architectures, inject chaos, and learn how to build resilient systems.
 
-### What Makes Archaos Different?
-Unlike standard infrastructure visualizers (like Excalidraw or draw.io) which are purely static, or cloud-native chaos engineering platforms (like Chaos Mesh or Gremlin) which operate on real Kubernetes clusters and require complex orchestration, **Archaos** merges both worlds into a lightweight, instant-feedback sandbox:
-*   **Request-Level Accuracy**: It simulates real network calls propagation, queue backpressure, CDN caching, and database connection pools.
-*   **Dedicated Execution Sandbox**: Simulating millions of requests on the client-side using a fast, non-blocking Web Worker.
-*   **AI-Powered Explainers**: Real-time narration detailing *why* the failure cascades and predicting the blast radius.
+---
+
+## 1. Project Introduction
+
+Archaos is an immersive educational and testing tool designed to help developers visualize, trace, and understand distributed system vulnerabilities. Rather than relying on simple abstract flowcharts or heavy Kubernetes-based clusters, Archaos operates on a real-time, event-driven request simulation engine. 
+
+### Tagline
+> **"Visualizing systemic failure before it takes down production."**
+
+### Core Differentiators
+*   **Request-Level Queue Modeling**: It simulates individual virtual request packets traversing through API Gateways, queues, services, Redis caches, and PostgreSQL connection pools.
+*   **Web Worker Sandboxing**: Offloads high-throughput calculations to a background HTML5 Web Worker thread, keeping the UI smooth (60 FPS) even when processing thousands of virtual RPS.
+*   **Interactive Incident Narration**: Integrates LLMs (OpenRouter/OpenAI API) to provide streaming audio-visual commentary on active failure cascades, explaining cause, effect, and mitigation techniques in real-time.
+*   **Cinematic "War Room" Design**: Replaces boring enterprise dashboards with a sleek, glowing dark-mode UI with customizable canvas node configurations.
 
 ---
 
@@ -21,47 +30,47 @@ Unlike standard infrastructure visualizers (like Excalidraw or draw.io) which ar
 
 | Capability | Archaos Sandbox | Chaos Mesh / Gremlin | Static Diagrams (draw.io) |
 | :--- | :--- | :--- | :--- |
-| **Instant Interactive Editor** | **Yes** (Drag-and-drop nodes & edges) | No (Configured via YAML/CRDs) | Yes (But static shapes only) |
-| **Real-time Queue Simulation**| **Yes** (Queue bounds, backpressure) | No (Stresses system resource level) | No |
-| **AI Narrative & Predictions**  | **Yes** (Streaming causal analysis) | No | No |
-| **Multiplayer Incident Rooms** | **Yes** (Live Socket.io collaborative war rooms) | No | No |
-| **Guided Educational Scenarios** | **Yes** (Quizzes & interactive milestones) | No | No |
-| **Setup Overhead** | **None** (Runs instantly, optional DB) | High (Requires Kubernetes clusters) | None |
+| **Instant Interactive Editor** | **Yes** (Drag-and-drop nodes & configure properties) | No (Requires writing YAML/CRD configuration files) | Yes (But shapes are purely static) |
+| **Real-time Queue Simulation**| **Yes** (Queue bounds, processing times, backpressure) | No (Injects failures at the VM/container resource level) | No |
+| **AI Narrative & Predictions**  | **Yes** (Streaming causal analysis and metrics to watch) | No | No |
+| **Multiplayer Incident Rooms** | **Yes** (Collaborative Socket.io Incident rooms) | No | No |
+| **Guided Educational Scenarios** | **Yes** (Built-in walkthroughs and interactive check-ins) | No | No |
+| **Setup & Run Overhead** | **None** (Launches instantly locally or in the browser) | High (Requires Kubernetes cluster and admin access) | None |
 
 ---
 
 ## 3. Architecture Overview
 
-Archaos is structured as a monorepo workspace for clean segregation of frontend, backend, and database configurations.
+Archaos is structured as a TypeScript monorepo workspace for clean isolation of frontend components and backend API services:
 
 ```
 archaos/
 ├── apps/
-│   ├── web/                    # Frontend React Application
-│   │   ├── public/             # Static files, sitemaps, robots.txt
+│   ├── web/                    # Frontend React 19 Application
+│   │   ├── public/             # Static configurations, sitemaps, and robots.txt
 │   │   └── src/
-│   │       ├── components/     # UI components, layout, and Canvas wrapper
-│   │       ├── hooks/          # React hooks (e.g., simulation manager)
-│   │       ├── lib/            # Axios API client, Supabase configs
+│   │       ├── components/     # UI layouts, Navbars, and React Flow Canvas wrappers
+│   │       ├── hooks/          # React hooks (simulation managers, Web Worker listeners)
+│   │       ├── lib/            # Axios API wrappers and Supabase connection clients
 │   │       ├── pages/          # Landing, Dashboard, Auth, Editor, Learn, Scenarios
-│   │       ├── stores/         # Zustand state stores (auth, canvas, simulation)
-│   │       ├── types/          # Topology and simulation type definitions
-│   │       └── workers/        # Web Worker simulation engine (isolated runtimes)
+│   │       ├── stores/         # Zustand state containers (Auth, Canvas, SimStates)
+│   │       ├── types/          # Shared type safety constraints for Topologies and Simulators
+│   │       └── workers/        # Discrete Event Loop Simulation Web Worker
 │   │
 │   └── api/                    # Backend NestJS HTTP and WebSocket Server
-│       ├── prisma/             # Schema definition, migrations, and seeds
+│       ├── prisma/             # Schema definitions, migrations, and seeds
 │       └── src/
 │           ├── modules/        # Domain-driven NestJS modules
 │           │   ├── auth/       # Custom JWT and Supabase sign-in/up logic
-│           │   ├── blast/      # Chaos blast radius modeling & logs
-│           │   ├── narration/  # OpenAI/OpenRouter WebSockets streamer
-│           │   ├── scenarios/  # Built-in scenarios store & play counters
-│           │   ├── sessions/   # Multi-operator collaborative workspaces
-│           │   └── topologies/ # Node & edge JSON configurations persistence
-│           └── main.ts         # Server entrypoint and CORS declarations
+│           │   ├── topologies/ # Node & edge JSON configurations persistence
+│           │   ├── scenarios/  # Pre-compiled walkthrough scenarios
+│           │   ├── blast/      # Chaos blast radius modeling & log aggregators
+│           │   ├── sessions/   # Multi-operator collaborative rooms
+│           │   └── narration/  # OpenAI/OpenRouter WebSockets streaming gateway
+│           └── main.ts         # Server entrypoint and CORS configurations
 │
-├── docker-compose.yml          # Container configuration for Postgres & Redis
-├── package.json                # Monorepo workspaces command hub
+├── docker-compose.yml          # Container orchestration for Postgres & Redis
+├── package.json                # Monorepo workspaces command manager
 └── README.md                   # Project documentation
 ```
 
@@ -69,266 +78,309 @@ archaos/
 
 ## 4. AI Capabilities
 
-Archaos includes a live **AI Narrator** that acts as a co-pilot during incident response. 
+Archaos features a real-time **AI Incident Narrator** that watches the active simulation canvas and explains systemic failures to users.
 
 ### How It Works:
-1. When a failure is injected (e.g., Latency Injection) or a node shifts state (e.g., Circuit Breaker Trips), the simulation engine generates a structured event payload.
-2. The event, current topology metadata, and real-time state metrics are transmitted to the NestJS backend via WebSockets (`narration` namespace).
-3. The backend makes a streaming call to the **OpenRouter API** using a primary model (`openai/gpt-oss-120b`) with a fallback model (`moonshotai/kimi-k2.6`) if the primary is slow or rate-limited.
-4. The AI streams a JSON object back, containing:
-    *   `narration`: A 2-3 sentence explanation of the specific cause of the failure.
-    *   `concept`: The canonical name of the distributed systems concept (e.g., *Cascading Failure*, *Retry Storm*, *Backpressure*).
-    *   `prediction`: A predictive forecast of what will happen next and when.
-    *   `watchFor`: The specific metric (e.g., p99 latency, queue depth) the user should watch to verify the prediction.
-5. If the AI API keys are missing, the gateway automatically falls back to an offline pattern-matching simulator to ensure a seamless UX.
+```
++------------------+     Simulation Events      +-------------------+
+|  Vite Web Client | -------------------------> | NestJS WS Gateway |
+|  (Canvas State)  |                            | (narration.gw)    |
++------------------+                            +-------------------+
+                                                          |
+                                                          | (Event + Topology payload)
+                                                          v
++------------------+    Fallback Completion     +-------------------+
+| Offline Fallback | <------------------------- |   OpenRouter API  |
+| Narrative Engine |                            | (GPT-4 / Moonshot)|
++------------------+                            +-------------------+
+```
+
+1. **Event Capture**: When a node changes health states (e.g., transitions from `HEALTHY` to `DEGRADED` or `FAILED`) or an edge trips its circuit breaker, an event payload is dispatched.
+2. **WebSocket Pipeline**: The payload is piped through the `/narration` WebSocket namespace.
+3. **OpenRouter streaming**: The backend formats a custom prompt containing the exact JSON topology and active metrics, then invokes OpenRouter's model API (`openai/gpt-oss-120b` with a failover to `moonshotai/kimi-k2.6`).
+4. **Structured JSON Streaming**: The prompt instructs the model to stream back a JSON payload:
+   ```json
+   {
+     "narration": "A detailed explanation of why Node X degraded downstream.",
+     "concept": "Distributed Systems Concept (e.g. Cascading Failure)",
+     "prediction": "What will fail next in 10-30 seconds if left untreated.",
+     "watchFor": "Specific metric or node state to monitor"
+   }
+   ```
+5. **Zero-API-Key Fallback**: If OpenAI/OpenRouter keys are not configured in `.env`, the gateway transparently switches to a local pattern-matching narration parser to maintain functionality.
 
 ---
 
 ## 5. Security Architecture
 
-Archaos ensures secure multiplayer collaborations and safe user custom topology management:
-
-*   **Authentication & Authorization**: Integrated with Supabase Auth or custom BCrypt-hashed password matching stored in PostgreSQL. Validated through JWT-bearer tokens in NestJS Guards.
-*   **WebSocket Validation**: Collaborative room joins (`sessions`) validate JWT tokens before assigning write-capabilities.
-*   **Input Sanitization**: Node configurations (edges timeouts, retry bounds, pool sizes) are strongly typed and validated at the API boundary using NestJS `ValidationPipe` with `class-validator`.
-*   **Database Isolation**: Users can only modify or delete topologies they created. Public topologies are read-only templates.
-*   **Rate Limiting**: Configured at the API gateway layer to prevent denial of service from excessive simulation starts.
+Archaos enforces enterprise-grade security controls:
+*   **Authentication Flow**: Implements a dual approach—supports direct **Supabase Authentication** for cloud deployments, alongside a local custom **BCrypt-based JWT** login gateway for simple offline local environments.
+*   **Input Sanitization**: Node specifications (replica counts, connection pools, and circuit breaker timeouts) are checked at the REST boundary using NestJS validation pipes (`class-validator` and `class-transformer`).
+*   **Scoped Access Controls**: Users can write, delete, and modify only their own topologies and simulation histories. Default educational scenarios are marked as read-only built-in records.
+*   **WebSockets Validation**: Socket connection requests are checked against the authorization store before joining collaborative incident rooms, preventing session spoofing.
 
 ---
 
 ## 6. Quick Start Guide
 
 ### Prerequisites
-*   [Node.js](https://nodejs.org/) v20+
-*   [Docker](https://www.docker.com/) & Docker Compose
-*   *Optional*: OpenAI/OpenRouter API key for live AI commentary
+*   **Node.js**: `v20.0.0` or higher
+*   **Docker**: Docker Compose command-line utilities
+*   **Supabase Client**: Account keys (if saving public sessions to the cloud)
 
 ### Step-by-Step Installation
 
-#### 1. Clone & Install Workspace
+#### 1. Clone & Workspace Setup
 ```bash
 git clone https://github.com/narwal4421/Archaos.git
 cd Archaos
 npm install
 ```
 
-#### 2. Set Up Environment Variables
-Create the root `.env` configuration file:
+#### 2. Configure Environment Variables
+Copy and update variables for the backend:
 ```bash
 cp .env.example .env
 ```
-Update the variables inside `.env`:
+Ensure your database connections and API keys are specified inside `.env`:
 ```env
 DATABASE_URL="postgresql://archaos_user:archaos_password@localhost:5433/archaos_db?schema=public"
 REDIS_URL="redis://localhost:6380"
-JWT_SECRET="use-a-secure-random-phrase-here"
-OPENAI_API_KEY="sk-..."  # Provide your OpenAI/OpenRouter key
+JWT_SECRET="generate-a-strong-32-character-secret"
+OPENAI_API_KEY="sk-..."  # Provide OpenAI or OpenRouter Key
 ```
 
-Create the frontend configuration file:
+Copy and update variables for the frontend:
 ```bash
 cp apps/web/.env.example apps/web/.env
 ```
-Update `apps/web/.env`:
+Ensure client credentials match your local setup:
 ```env
 VITE_SUPABASE_URL="https://your-supabase-id.supabase.co"
 VITE_SUPABASE_ANON_KEY="your-anon-key"
 ```
 
-#### 3. Spin Up Infrastructure Containers
-Launch PostgreSQL and Redis in the background:
+#### 3. Boot Infrastructure Containers
+Start local PostgreSQL and Redis servers using Docker:
 ```bash
 npm run docker:up
 ```
 
-#### 4. Run Migrations & Database Seeds
-Generate the Prisma client, migrate schemas, and seed scenarios:
+#### 4. Run Migrations & Seeds
+Generate Prisma schemas and seed pre-configured scenarios:
 ```bash
 npm run build:api
 npx prisma db seed
 ```
 
-#### 5. Launch the Monorepo
-Start both the React web application and NestJS backend concurrently:
+#### 5. Launch Development Servers
+Start frontend and backend applications concurrently:
 ```bash
 npm run dev
 ```
-*   **Web Portal**: [http://localhost:5173](http://localhost:5173)
-*   **API Server**: [http://localhost:5000/api](http://localhost:5000/api)
+*   **Frontend Client**: [http://localhost:5173](http://localhost:5173)
+*   **Backend REST/WS**: [http://localhost:5000/api](http://localhost:5000/api)
 
 ---
 
 ## 7. Tech Stack
 
-| Workspace | Technology / Package | Purpose |
+### Monorepo Workspaces
+
+| Layer | Package / Tool | Purpose |
 | :--- | :--- | :--- |
-| **Frontend (`apps/web`)** | React 19 / TypeScript / Vite 8 | Core user interface framework. |
-| | `@xyflow/react` | Visual workspace graph rendering and node manipulation. |
-| | `d3` | Graph positioning math and animation coordinates. |
-| | `framer-motion` | Smooth transition overlays and dashboard animations. |
-| | `zustand` | Store configuration for topology and session sync. |
-| **Backend (`apps/api`)** | NestJS 11 / Node | Scalable server API and WebSocket engine. |
-| | Socket.io | Real-time synchronization of shared incident rooms. |
-| | Prisma 6 | Type-safe database queries and migrations. |
-| | `ioredis` | Caching server actions and tracking WebSocket active connections. |
-| | `openai` | Access OpenRouter streaming models for incident narration. |
+| **Frontend (`apps/web`)** | React 19 / Vite 8 | User portal rendering core. |
+| | `@xyflow/react` | Node layout graph manipulation canvas. |
+| | `d3` | Dynamic calculation of edge path physics and load arrows. |
+| | `framer-motion` | Smooth transition animation blocks and overlay panels. |
+| | `zustand` | State manager coordinating authentication and simulations. |
+| **Backend (`apps/api`)** | NestJS 11 / Express | High-performance microservices backend framework. |
+| | Socket.io | Bidirectional sync of multi-operator simulation rooms. |
+| | Prisma 6 | ORM matching relational PostgreSQL schemas. |
+| | `ioredis` | Caching API requests and tracking active Socket clients. |
+| | `openai` | Accessing OpenRouter streaming models for live narration. |
 
 ---
 
 ## 8. Core Engine Technical Details
 
-The heartbeat of Archaos is its client-side **Simulation Engine**. Running simulations in the main UI thread causes input lag and halts graph animations. Archaos solves this by decoupling rendering from computation using an isolated **HTML5 Web Worker**.
+The engine simulates requests using a client-side **Discrete Event Simulation (DES)** loop. 
 
 ```
-+-------------------------------------------------------------+
-|                        MAIN THREAD                          |
-|  [React Web Canvas] <======== (Updates: Queue, CPU, Errors) -+
-|         ||                                                  |
-|  (User Action: Inject Latency)                              |
-|         ||                                                  |
-+---------||--------------------------------------------------+
-          ||  [PostMessage API]
-+---------||--------------------------------------------------+
-|         \/                                                  |
-|    WEB WORKER (simulation.worker.ts)                        |
-|                                                             |
-|  +-------------------------------------------------------+  |
-|  |                Discrete Event Loop                    |  |
-|  |  1. Pulls incoming requests from client generator.    |  |
-|  |  2. Propagates requests downstream using Edge latency. |  |
-|  |  3. Manages per-service queue counts & processing.     |  |
-|  |  4. Calculates sliding-window error rates (10s).      |  |
-|  |  5. Evaluates circuit breaker states.                 |  |
-|  |  6. Updates CPU saturation and backpressure logic.    |  |
-|  +-------------------------------------------------------+  |
-+-------------------------------------------------------------+
+                                [ CLIENT PRODUCER ]
+                                         │
+                                         ▼ (Adds Requests)
+ +-----------------------------------------------------------------------------------+
+ |   BACKGROUND WEB WORKER (simulation.worker.ts)                                    |
+ |                                                                                   |
+ |  +-----------------------+              +-----------------------+                 |
+ |  |    Priority Queue     | -----------> |   Service Nodes Map   |                 |
+ |  |  (Heap Sorted Times)  |              | - Tracks Queue Depth  |                 |
+ |  +-----------------------+              | - CPU Saturation      |                 |
+ |                                         | - Replica Processing  |                 |
+ |                                         +-----------------------+                 |
+ |                                                     │                             |
+ |                                                     ▼                             |
+ |                                         +-----------------------+                 |
+ |                                         |   Edge Runtime Map    |                 |
+ |                                         | - Latency / PacketLoss|                 |
+ |                                         | - Circuit Breaker CB  |                 |
+ |                                         +-----------------------+                 |
+ +-----------------------------------------------------------------------------------+
+                                         │
+                                         ▼ (State Serialized & Emitted)
+                                [ MAIN RENDERING THREAD ]
 ```
 
-### Key Simulation Models Implemented:
-*   **Sliding-Window Circuit Breakers**: Trips open when failure rates exceed configurable thresholds within a rolling 10-second window. Transitions back to half-open, sending probe requests, before closing.
-*   **Queue Backpressure**: When a node is processing slowly or its queue fills up, it throttles the throughput of incoming edges, causing upstream services to accumulate requests.
-*   **Thundering Herd Simulation**: When cache nodes expire, request routing bypasses cache buffers and hits database pool limits directly, causing DB connection exhaustion.
+### Key Mathematical & Simulation Concepts:
+1.  **Heap-Sorted Priority Queue**: Each virtual network request package is an object with an arrival timestamp:
+    ```typescript
+    interface RequestEvent {
+      id: string;
+      time: number; // Execution timestamp (ms)
+      type: 'ARRIVE' | 'DEPART';
+      currentNodeId: string;
+      edgeHistory: string[];
+    }
+    ```
+2.  **Backpressure Algorithm**: When downstream service CPU exceeds $90\%$, processing duration spikes. Queue depth grows toward `maxQueueDepth`. Upstream nodes calling this degraded service throttle their departure rate to prevent memory exhaustion, propagating latency back up to the API Gateway.
+3.  **Circuit Breaker State Machine**:
+    $$\text{Error Rate} = \frac{\text{Failed Requests in } 10\text{s}}{\text{Total Requests in } 10\text{s}} \times 100$$
+    If this rate exceeds the threshold limit, the circuit transitions to `OPEN`, immediately rejecting traffic (failing fast) to protect downstream infrastructure.
 
 ---
 
 ## 9. Real-Time & Collaboration Features
 
-Archaos features collaborative incident-response rooms. Leveraging **Socket.io**, multiple operators can join the same simulation room.
+Archaos collaborative rooms use **WebSockets** via `socket.io-client` and `@nestjs/platform-socket.io` to synchronize state:
 
-*   **Multiplayer Workspace Sync**: Any changes made by an operator—adding a node, altering an edge timeout, or starting a simulation—are broadcast instantly to all other users in the room.
-*   **Collaborative Chaos Injection**: Operators can cooperatively trigger failures (e.g. CPU spikes) and coordinate remediation (e.g. scaling replicas or resetting circuit breakers) in real-time.
-*   **Coordinated AI Narration**: The AI narration stream is broadcasted to all participants in the session, keeping all operators aligned.
+*   **State Conflict Resolution**: When multiple operators modify the topology configuration (moving coordinates or configuring replicas) concurrently, actions are timestamped and resolved using a Last-Write-Wins (LWW) CRDT policy.
+*   **Simultaneous Failures**: Operators can execute chaos blasts (e.g., dropping database edges) concurrently, viewing the immediate downstream impacts on each other's screens.
+*   **Shared AI Narration Feed**: Live narration audio and text logs generated by the AI narrator are streamed to all operators in the session, keeping everyone on the same page.
 
 ---
 
 ## 10. Database Schema
 
-The database is schema-managed using **Prisma** with a PostgreSQL connector.
+The database is built on PostgreSQL and mapped via **Prisma ORM**.
 
-```mermaid
-erDiagram
-    User ||--o{ Topology : "creates"
-    User ||--o{ SimSession : "runs"
-    Topology ||--o{ SimSession : "simulates"
+```prisma
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  topologies   Topology[]
+  sessions     SimSession[]
+}
 
-    User {
-        String id PK
-        String email UNIQUE
-        String passwordHash
-        String name
-        DateTime createdAt
-        DateTime updatedAt
-    }
+model Topology {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  name        String
+  description String?
+  isPublic    Boolean      @default(false)
+  nodesJson   Json         // Array of NodeConfig
+  edgesJson   Json         // Array of EdgeConfig
+  thumbnail   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  sessions    SimSession[]
+}
 
-    Topology {
-        String id PK
-        String userId FK
-        String name
-        String description
-        Boolean isPublic
-        Json nodesJson
-        Json edgesJson
-        String thumbnail
-        DateTime createdAt
-        DateTime updatedAt
-    }
+model Scenario {
+  id                String   @id @default(uuid())
+  name              String
+  description       String
+  category          String   // CASCADE, RETRY_STORM, THUNDERING_HERD, SPLIT_BRAIN
+  difficulty        String   // BEGINNER, INTERMEDIATE, ADVANCED
+  nodesJson         Json
+  edgesJson         Json
+  chaosScript       Json     // Pre-programmed timed chaos events
+  walkthroughScript Json     // Checkpoints and questions
+  isBuiltIn         Boolean  @default(false)
+  playCount         Int      @default(0)
+  createdAt         DateTime @default(now())
+}
 
-    Scenario {
-        String id PK
-        String name
-        String description
-        String category
-        String difficulty
-        Json nodesJson
-        Json edgesJson
-        Json chaosScript
-        Json walkthroughScript
-        Boolean isBuiltIn
-        Int playCount
-        DateTime createdAt
-    }
-
-    SimSession {
-        String id PK
-        String userId FK
-        String topologyId FK
-        String scenarioId
-        Int durationSecs
-        Json chaosEvents
-        Float maxErrorRate
-        Int nodesKilled
-        DateTime createdAt
-    }
+model SimSession {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id])
+  topologyId   String?
+  topology     Topology? @relation(fields: [topologyId], references: [id])
+  scenarioId   String?
+  durationSecs Int       @default(0)
+  chaosEvents  Json
+  maxErrorRate Float     @default(0)
+  nodesKilled  Int       @default(0)
+  createdAt    DateTime  @default(now())
+}
 ```
 
 ---
 
 ## 11. Available Scripts
 
-All workspace operations are run from the root repository directory:
+Run commands from the root repository directory:
 
-| Command | Workspace Scope | Description |
+| Command | Target Directory | Purpose |
 | :--- | :--- | :--- |
-| `npm run dev` | Monorepo root | Launches React Vite server and NestJS API server concurrently. |
-| `npm run dev:web` | `apps/web` | Starts Vite dev server (port 5173). |
-| `npm run dev:api` | `apps/api` | Starts NestJS dev server in watch-mode (port 5000). |
-| `npm run build` | Monorepo root | Compiles NestJS backend code and builds frontend assets. |
-| `npm run docker:up` | Infrastructure | Launches PostgreSQL (port 5433) and Redis (port 6380) Docker containers. |
-| `npm run docker:down`| Infrastructure | Shuts down database and cache containers, preserving volumes. |
-| `npx prisma db seed` | `apps/api` | Seeds default scenarios (Cascade, Retry Storm, etc.) into PostgreSQL. |
+| `npm run dev` | Root Monorepo | Spins up the Vite client and NestJS server concurrently. |
+| `npm run dev:web` | `apps/web` | Launches Vite on port 5173 in dev mode. |
+| `npm run dev:api` | `apps/api` | Launches NestJS server in watch mode. |
+| `npm run build` | Root Monorepo | Compiles both API and Web code for production. |
+| `npm run docker:up` | Root Monorepo | Boots postgres (5433) and redis (6380) locally. |
+| `npm run docker:down`| Root Monorepo | Shuts down backend database containers. |
+| `npx prisma migrate dev` | `apps/api` | Runs migration commands to sync local database. |
+| `npx prisma db seed` | `apps/api` | Populates database with default system scenarios. |
 
 ---
 
 ## 12. Deployment Guide
 
-### Backend & Database (Railway Recommendation)
-1. In Railway, create a new project and add **PostgreSQL** and **Redis** services.
-2. Link your GitHub repository.
-3. Configure the following environment variables:
-    *   `DATABASE_URL`: Linked from your Postgres plugin.
-    *   `REDIS_URL`: Linked from your Redis plugin.
-    *   `JWT_SECRET`: Generate a secure string.
-    *   `OPENAI_API_KEY`: Add your key.
-4. Set build command: `npm run build:api` and start command: `npm run start:prod`.
+### Infrastructure Setup
+1.  **Database & Redis Cache**: Provision a PostgreSQL v16 and a Redis v7 instance on a cloud provider like **Railway** or **Render**.
+2.  **Supabase Auth (Optional)**: If you're using Supabase for user authentication, set up a new project in the Supabase dashboard and note down your API keys.
 
-### Frontend Portal (Vercel Recommendation)
-1. Link your repo in Vercel.
-2. Configure Root Directory to `apps/web`.
-3. Set the Environment Variables:
-    *   `VITE_SUPABASE_URL`: Point to your Supabase project.
-    *   `VITE_SUPABASE_ANON_KEY`: Supabase anon key.
-4. Vercel automatically detects the Vite config and deploys.
+### Backend Deployment (Railway)
+1. Link your GitHub repository to **Railway**.
+2. Add a new service from your repository, and set the root directory to `apps/api`.
+3. Configure your Environment Variables:
+   *   `DATABASE_URL`: Set to your Postgres connection string.
+   *   `REDIS_URL`: Set to your Redis connection string.
+   *   `JWT_SECRET`: Set to your JWT secret.
+   *   `OPENAI_API_KEY`: Set to your OpenAI key.
+4. Set the build command to `npm run build:api` and start command to `npm run start:prod`.
+
+### Frontend Deployment (Vercel)
+1. Import your project repository into **Vercel**.
+2. Set the root directory to `apps/web`.
+3. Add the following build command overrides:
+   *   **Build Command**: `tsc -b && vite build`
+   *   **Output Directory**: `dist`
+4. Set the frontend Environment Variables:
+   *   `VITE_SUPABASE_URL`: Set to your Supabase project URL.
+   *   `VITE_SUPABASE_ANON_KEY`: Set to your Supabase anonymous key.
+5. Deploy the application.
 
 ---
 
 ## 13. API Documentation
 
-### Accessing APIs
-Once the server is running, the HTTP routes are mounted under `/api`:
-*   **Health Check Endpoint**: `GET http://localhost:5000/api` - Returns a `200 OK` handshake string from the application server.
-*   **Auth Module**: `POST /api/auth/login`, `POST /api/auth/register`
-*   **Topology Storage**: `GET /api/topologies`, `POST /api/topologies`
-*   **Scenarios**: `GET /api/scenarios`, `GET /api/scenarios/:id`
+REST endpoints are exposed on `http://localhost:5000/api`.
+
+### Key Endpoints:
+*   `GET /api` - **Health Check**: Handshake endpoint returning server health.
+*   `POST /api/auth/register` - Create user accounts.
+*   `POST /api/auth/login` - Authenticate users and retrieve JWT tokens.
+*   `GET /api/topologies` - Retrieve public or user-scoped custom topologies.
+*   `POST /api/topologies` - Save new system topologies (nodes, edges configurations).
+*   `GET /api/scenarios` - Retrieve list of available system scenario walkthroughs.
+*   `POST /api/sessions` - Register logs for completed simulation session runs.
 
 ---
 
@@ -353,23 +405,28 @@ Once the server is running, the HTTP routes are mounted under `/api`:
 - [x] **Collaborative Workspace**
   - [x] Socket.io rooms state synchronization.
   - [x] Multi-operator simulation inputs.
+- [x] **System Analytics Panel**
+  - [x] High-performance system-wide sparklines (Total RPS, Error Rate, p99 Latency).
+  - [x] Per-node live breakdown table (Memory usage, CPU saturation, Queue Depth).
 
 ---
 
 ## 15. Contributing Guide
 
-1. **Fork** the repository to your own GitHub account.
-2. **Clone** it locally and establish the upstream remote configuration.
-3. Create a **branch** for your feature:
+1. Fork the repository on GitHub.
+2. Clone the fork locally:
    ```bash
-   git checkout -b feature/amazing-feature
+   git clone https://github.com/your-username/Archaos.git
    ```
-4. Write clean, modular, and type-safe code. Add comments for complex routing mathematics.
-5. **Commit** using standard semantic naming conventions:
+3. Create a branch for your feature:
+   ```bash
+   git checkout -b feat/my-amazing-feature
+   ```
+4. Commit your changes:
    ```bash
    git commit -m "feat: add sliding window latency metrics to UI panel"
    ```
-6. **Push** to your remote fork and open a **Pull Request** targeting the `main` branch.
+5. Push to your branch and open a Pull Request.
 
 ---
 
