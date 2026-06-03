@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api } from '../lib/api'
 import type { BlastRadiusResult } from '../types/simulation'
+import type { NodeType } from '../types/topology'
 
 interface RawNode {
   id: string
@@ -36,7 +37,7 @@ export function useBlastRadius() {
       // Format nodes and edges to match backend requirements
       const formattedNodes = nodes.map(n => ({
         id: n.id,
-        type: (n.type || n.data?.type || 'SERVICE') as any,
+        type: (n.type || n.data?.type || 'SERVICE') as NodeType,
         label: n.data?.label || n.label || '',
         replicas: n.data?.replicas ?? 1,
         processingTimeMs: n.data?.processingTimeMs ?? 50,

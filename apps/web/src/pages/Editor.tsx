@@ -412,7 +412,7 @@ export function Editor() {
   const { loadTopology, topologyName, setTopologyName, reset: resetCanvas } = useCanvasStore()
   const { reset: resetSim } = useSimulation()
 
-  const sessionId = useRef(Math.random().toString(36).slice(2)).current
+  const [sessionId] = useState(() => Math.random().toString(36).slice(2))
   const { sendEvent } = useNarration(sessionId)
   const simState = useSimulationStore(s => s.simState)
   const canvasStore = useCanvasStore()
