@@ -75,5 +75,8 @@ export function useSimulation() {
   const injectChaos = (action: ChaosAction) =>
     workerRef.current?.postMessage({ type: 'INJECT_CHAOS', payload: { action } })
 
-  return { start, pause, resume, reset, setSpeed, setTraffic, injectChaos }
+  const scheduleChaos = (timeSec: number, action: ChaosAction) =>
+    workerRef.current?.postMessage({ type: 'SCHEDULE_CHAOS', payload: { timeSec, action } })
+
+  return { start, pause, resume, reset, setSpeed, setTraffic, injectChaos, scheduleChaos }
 }

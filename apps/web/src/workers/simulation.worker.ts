@@ -71,36 +71,57 @@ class NodeSimState {
   activeConnections = 0
   healthyReplicas: number
   isLeakingMemory = false
+  droppedRps = 0
+  saturationPercent = 0
+
+  // CDN-specific
+  cacheWarmedUp = false
+  cacheWarmupRequests = 0
+  cacheHitRate = 0
 
   private requestsThisTick = 0
   private errorsThisTick = 0
+  private droppedThisTick = 0
   private latencies: number[] = []
   private prevHealth: NodeHealthState = 'HEALTHY'
   private oomRecoveryTimer = 0
+  // Slow memory drift for alive-looking metrics
+  private memDriftTarget = 0
+  // LB round-robin state
+  lbRoundRobinIndex = 0
 
   constructor(config: NodeConfig) {
     this.id = config.id
     this.config = config
     this.healthyReplicas = config.replicas ?? 1
+    // Start memory at a realistic baseline (10–30%)
+    this.memoryPercent = 10 + Math.random() * 20
+    this.memDriftTarget = this.memoryPercent
   }
 
-  addRequest(latencyMs: number, isError: boolean) {
+  addRequest(latencyMs: number, isError: boolean, isDropped = false) {
     this.requestsThisTick++
     if (isError) this.errorsThisTick++
-    this.latencies.push(latencyMs)
+    if (isDropped) this.droppedThisTick++
+    else this.latencies.push(latencyMs)
     if (this.latencies.length > 500) this.latencies.shift()
+  }
+
+  /** Returns true if the node's queue is full and the request must be shed. */
+  isOverloaded(): boolean {
+    const maxQueue = this.config.maxQueueDepth ?? 500
+    return this.queueDepth >= maxQueue
   }
 
   tick(tickDurationMs: number): boolean {
     this.prevHealth = this.health
 
-    // Handle memory pressure leak
+    // ── Memory leak ─────────────────────────────────────────
     if (this.isLeakingMemory && this.health !== 'FAILED') {
-      // Memory leaks at 1.5% per second, scaled by speed
       this.memoryPercent = Math.min(100, this.memoryPercent + 1.5 * (tickDurationMs / 1000))
       if (this.memoryPercent >= 100) {
-        this.kill() // OOM crash!
-        this.oomRecoveryTimer = 50 // 5 seconds (50 ticks of 100ms) to restart
+        this.kill()
+        this.oomRecoveryTimer = 50
       }
     }
 
@@ -109,30 +130,71 @@ class NodeSimState {
       this.requestsPerSec = 0
       this.errorRatePercent = 100
       this.cpuPercent = 0
+      this.droppedRps = 0
       if (this.oomRecoveryTimer > 0) {
         this.oomRecoveryTimer--
-        if (this.oomRecoveryTimer === 0) {
-          this.recover()
-        }
+        if (this.oomRecoveryTimer === 0) this.recover()
       }
-    } else {
-      const ticksPerSec = 1000 / tickDurationMs
-      this.requestsPerSec = this.requestsThisTick * ticksPerSec
-      this.errorRatePercent = this.requestsThisTick > 0
-        ? (this.errorsThisTick / this.requestsThisTick) * 100 : 0
+      this.requestsThisTick = 0
+      this.errorsThisTick = 0
+      this.droppedThisTick = 0
+      return this.health !== this.prevHealth
+    }
 
-      if (this.latencies.length > 0) {
-        const sorted = [...this.latencies].sort((a, b) => a - b)
-        this.p99LatencyMs = sorted[Math.floor(sorted.length * 0.99)] ?? sorted[sorted.length - 1]
-      }
+    const ticksPerSec = 1000 / tickDurationMs
+    this.requestsPerSec = this.requestsThisTick * ticksPerSec
+    this.droppedRps = this.droppedThisTick * ticksPerSec
+    this.errorRatePercent = this.requestsThisTick > 0
+      ? (this.errorsThisTick / this.requestsThisTick) * 100 : 0
 
-      const capacity = (this.config.cpuLimit ?? 100) * (this.healthyReplicas / (this.config.replicas ?? 1))
-      this.cpuPercent = Math.min(100, (this.requestsPerSec / Math.max(1, capacity)) * 80 + Math.random() * 5)
+    if (this.latencies.length > 0) {
+      const sorted = [...this.latencies].sort((a, b) => a - b)
+      this.p99LatencyMs = sorted[Math.floor(sorted.length * 0.99)] ?? sorted[sorted.length - 1]
+    }
+
+    // ── CPU: work-based model with replica scaling ───────────
+    const replicaScale = this.healthyReplicas / Math.max(1, this.config.replicas ?? 1)
+    const capacity = (this.config.cpuLimit ?? 100) * replicaScale
+    const rawCpu = (this.requestsPerSec / Math.max(1, capacity)) * 90
+    // Small jitter so graphs look alive
+    const jitter = (Math.random() - 0.5) * 4
+    this.cpuPercent = Math.min(100, Math.max(0, rawCpu + jitter))
+
+    // Saturation: how close to capacity (includes queue pressure)
+    const maxQueue = this.config.maxQueueDepth ?? 500
+    const queueSaturation = (this.queueDepth / Math.max(1, maxQueue)) * 100
+    this.saturationPercent = Math.min(100, (this.cpuPercent * 0.7 + queueSaturation * 0.3))
+
+    // ── Back-pressure: drain queue based on capacity ─────────
+    if (this.queueDepth > 0) {
+      const drainRate = capacity * (tickDurationMs / 1000) * replicaScale
+      this.queueDepth = Math.max(0, this.queueDepth - drainRate)
+    }
+
+    // ── Memory: realistic drift ──────────────────────────────
+    if (!this.isLeakingMemory) {
+      // Memory is influenced by CPU pressure — high CPU = more heap churn
+      const cpuInfluence = this.cpuPercent * 0.15
+      // Drift slowly toward target
+      this.memDriftTarget = Math.min(90, Math.max(5,
+        10 + cpuInfluence + Math.sin(Date.now() / 30000 + parseFloat(this.id)) * 5
+      ))
+      // Smooth interpolation
+      const drift = (this.memDriftTarget - this.memoryPercent) * 0.05
+      this.memoryPercent = Math.min(95, Math.max(3, this.memoryPercent + drift + (Math.random() - 0.5) * 0.3))
+    }
+
+    // ── Active connections (DATABASE nodes) ──────────────────
+    if (this.config.type === 'DATABASE') {
+      const poolSize = this.config.connectionPoolSize ?? 20
+      const usedFraction = Math.min(1, this.requestsPerSec / Math.max(1, capacity))
+      this.activeConnections = Math.round(usedFraction * poolSize + (Math.random() - 0.5))
     }
 
     this.updateHealthState()
     this.requestsThisTick = 0
     this.errorsThisTick = 0
+    this.droppedThisTick = 0
 
     return this.health !== this.prevHealth
   }
@@ -140,14 +202,14 @@ class NodeSimState {
   private updateHealthState() {
     if (this.health === 'FAILED') return
 
-    if (this.cpuPercent > 95 || this.errorRatePercent > 50 ||
-        (this.config.maxQueueDepth && this.queueDepth > this.config.maxQueueDepth * 0.9)) {
+    const queuePressure = this.queueDepth / (this.config.maxQueueDepth ?? 500)
+
+    if (this.cpuPercent > 92 || this.errorRatePercent > 50 || queuePressure > 0.9) {
       this.health = 'UNHEALTHY'
-    } else if (this.cpuPercent > 75 || this.errorRatePercent > 10 ||
-               (this.config.maxQueueDepth && this.queueDepth > this.config.maxQueueDepth * 0.7)) {
+    } else if (this.cpuPercent > 75 || this.errorRatePercent > 10 || queuePressure > 0.7) {
       this.health = 'DEGRADED'
     } else if (this.health === 'RECOVERING') {
-      if (this.cpuPercent < 50 && this.errorRatePercent < 2) {
+      if (this.cpuPercent < 50 && this.errorRatePercent < 2 && queuePressure < 0.3) {
         this.health = 'HEALTHY'
       }
     } else {
@@ -161,13 +223,17 @@ class NodeSimState {
     this.errorRatePercent = 100
     this.cpuPercent = 0
     this.memoryPercent = 0
+    this.queueDepth = 0
+    this.activeConnections = 0
   }
 
   recover() {
     this.health = 'RECOVERING'
     this.errorRatePercent = 0
-    this.memoryPercent = 10
+    this.memoryPercent = 10 + Math.random() * 15
     this.healthyReplicas = this.config.replicas ?? 1
+    this.isLeakingMemory = false
+    this.queueDepth = 0
   }
 
   killReplica() {
@@ -177,7 +243,8 @@ class NodeSimState {
 
   serialize(): NodeRuntimeState {
     return {
-      id: this.id, health: this.health,
+      id: this.id,
+      health: this.health,
       requestsPerSec: Math.round(this.requestsPerSec),
       errorRatePercent: Math.round(this.errorRatePercent * 10) / 10,
       p99LatencyMs: Math.round(this.p99LatencyMs),
@@ -186,6 +253,8 @@ class NodeSimState {
       queueDepth: Math.round(this.queueDepth),
       activeConnections: this.activeConnections,
       healthyReplicas: this.healthyReplicas,
+      droppedRps: Math.round(this.droppedRps),
+      saturationPercent: Math.round(this.saturationPercent),
     }
   }
 }
@@ -203,6 +272,7 @@ class EdgeSimState {
   addedLatencyMs = 0
   packetLossPercent = 0
   isPartitioned = false
+  bandwidthThrottlePercent = 0  // 0 = no throttle, 80 = only 20% gets through
 
   private requestsThisTick = 0
   private errorsThisTick = 0
@@ -220,6 +290,12 @@ class EdgeSimState {
     if (this.latencies.length > 200) this.latencies.shift()
   }
 
+  /** Returns the effective RPS multiplier after throttle (0–1). */
+  effectivePassRate(): number {
+    if (this.bandwidthThrottlePercent <= 0) return 1
+    return Math.max(0, 1 - this.bandwidthThrottlePercent / 100)
+  }
+
   tick(tickDurationMs: number) {
     const ticksPerSec = 1000 / tickDurationMs
     this.requestsPerSec = this.requestsThisTick * ticksPerSec
@@ -235,6 +311,7 @@ class EdgeSimState {
     this.addedLatencyMs = 0
     this.packetLossPercent = 0
     this.isPartitioned = false
+    this.bandwidthThrottlePercent = 0
     this.circuitBreakerState = 'CLOSED'
   }
 
@@ -248,50 +325,65 @@ class EdgeSimState {
       addedLatencyMs: this.addedLatencyMs,
       packetLossPercent: this.packetLossPercent,
       isPartitioned: this.isPartitioned,
+      bandwidthThrottlePercent: this.bandwidthThrottlePercent,
     }
   }
 }
 
 // ============================================================
-// CIRCUIT BREAKER
+// CIRCUIT BREAKER — Sliding time-window implementation
 // ============================================================
 class CircuitBreaker {
   state: CircuitBreakerState = 'CLOSED'
-  private errorCount = 0
-  private totalCount = 0
   private openedAt = 0
   private prevState: CircuitBreakerState = 'CLOSED'
-
-  private config: EdgeConfig
+  // Ring buffer: [timestamp, isError][]
+  private readonly windowSecs: number
+  private readonly errorThreshold: number
+  private readonly halfOpenAfter: number
+  private events: Array<{ ts: number; isError: boolean }> = []
 
   constructor(config: EdgeConfig) {
-    this.config = config
+    this.windowSecs = config.cbWindowSecs ?? 10
+    this.errorThreshold = config.cbErrorThresholdPercent ?? 50
+    this.halfOpenAfter = config.cbHalfOpenAfterSecs ?? 30
   }
 
   recordResult(isError: boolean, currentTimeSec: number): boolean {
     this.prevState = this.state
-    this.totalCount++
-    if (isError) this.errorCount++
 
-    const errorRate = this.totalCount > 5
-      ? (this.errorCount / this.totalCount) * 100 : 0
+    // Add event to ring buffer
+    this.events.push({ ts: currentTimeSec, isError })
+    // Prune events outside the sliding window
+    const cutoff = currentTimeSec - this.windowSecs
+    this.events = this.events.filter(e => e.ts >= cutoff)
 
-    if (this.state === 'CLOSED' && errorRate > (this.config.cbErrorThresholdPercent ?? 50)) {
+    const windowTotal = this.events.length
+    const windowErrors = this.events.filter(e => e.isError).length
+
+    // Require at least 5 samples before tripping
+    const errorRate = windowTotal >= 5 ? (windowErrors / windowTotal) * 100 : 0
+
+    if (this.state === 'CLOSED' && errorRate > this.errorThreshold) {
       this.state = 'OPEN'
       this.openedAt = currentTimeSec
     }
 
     if (this.state === 'OPEN') {
-      const halfOpenAfter = this.config.cbHalfOpenAfterSecs ?? 30
-      if (currentTimeSec - this.openedAt > halfOpenAfter) {
+      if (currentTimeSec - this.openedAt >= this.halfOpenAfter) {
         this.state = 'HALF_OPEN'
-        this.errorCount = 0
-        this.totalCount = 0
       }
     }
 
-    if (this.state === 'HALF_OPEN' && !isError) {
-      this.state = 'CLOSED'
+    if (this.state === 'HALF_OPEN') {
+      if (!isError) {
+        this.state = 'CLOSED'
+        this.events = [] // reset window
+      } else {
+        // Failed probe → re-open
+        this.state = 'OPEN'
+        this.openedAt = currentTimeSec
+      }
     }
 
     return this.state !== this.prevState
@@ -301,8 +393,7 @@ class CircuitBreaker {
 
   reset() {
     this.state = 'CLOSED'
-    this.errorCount = 0
-    this.totalCount = 0
+    this.events = []
   }
 }
 
@@ -390,37 +481,68 @@ class SimulationEngine {
     const edge = this.edges.get(action.targetId)
 
     switch (action.type) {
-      case 'KILL_NODE':           node?.kill(); break
-      case 'CPU_SPIKE':           if (node) node.cpuPercent = 96; break
-      case 'MEMORY_PRESSURE':     
+      case 'KILL_NODE':
+        node?.kill()
+        break
+      case 'CPU_SPIKE':
+        if (node) node.cpuPercent = 95 + Math.random() * 5
+        break
+      case 'MEMORY_PRESSURE':
         if (node) {
           node.isLeakingMemory = true
-          node.memoryPercent = 30
+          node.memoryPercent = Math.max(node.memoryPercent, 35)
         }
         break
-      case 'KILL_ONE_REPLICA':    node?.killReplica(); break
-      case 'EXHAUST_CONNECTIONS': if (node) node.activeConnections = node.config.connectionPoolSize ?? 20; break
-      case 'ADD_LATENCY':         if (edge) edge.addedLatencyMs = action.value ?? 500; break
-      case 'PACKET_LOSS':         if (edge) edge.packetLossPercent = action.value ?? 20; break
-      case 'NETWORK_PARTITION':   if (edge) edge.isPartitioned = true; break
-      case 'BANDWIDTH_THROTTLE':  break
+      case 'KILL_ONE_REPLICA':
+        node?.killReplica()
+        break
+      case 'EXHAUST_CONNECTIONS':
+        if (node) {
+          const poolSize = node.config.connectionPoolSize ?? 20
+          node.activeConnections = poolSize
+          node.cpuPercent = Math.min(100, node.cpuPercent + 40)
+        }
+        break
+      case 'ADD_LATENCY':
+        if (edge) edge.addedLatencyMs = action.value ?? 500
+        break
+      case 'PACKET_LOSS':
+        if (edge) edge.packetLossPercent = action.value ?? 20
+        break
+      case 'NETWORK_PARTITION':
+        if (edge) edge.isPartitioned = true
+        break
+      case 'BANDWIDTH_THROTTLE':
+        // Throttle: action.value = percent of bandwidth to choke (e.g., 70 = 30% gets through)
+        if (edge) edge.bandwidthThrottlePercent = action.value ?? 70
+        break
       case 'TRAFFIC_SPIKE':
-        this.trafficProfile = { ...this.trafficProfile, baseRps: this.trafficProfile.baseRps * (action.value ?? 10) }
+        this.trafficProfile = {
+          ...this.trafficProfile,
+          baseRps: this.trafficProfile.baseRps * (action.value ?? 10),
+        }
         break
       case 'CACHE_EXPIRE': {
+        // Force CDN to cold cache — simulate thundering-herd miss
+        const cdnNode = this.nodes.get(action.targetId)
+        if (cdnNode && cdnNode.config.type === 'CDN') {
+          cdnNode.cacheWarmedUp = false
+          cdnNode.cacheWarmupRequests = 0
+          cdnNode.cacheHitRate = 0
+        }
+        // Also hammer downstream DB with a burst
         const dbNode = this.nodes.get(action.targetId)
-        if (dbNode) {
-          for (let i = 0; i < 80; i++) {
-            dbNode.addRequest(Math.random() * 200 + 100, false)
+        if (dbNode && dbNode.config.type === 'DATABASE') {
+          for (let i = 0; i < 100; i++) {
+            dbNode.addRequest(150 + Math.random() * 200, false)
           }
         }
         break
       }
-      case 'RECOVER_NODE' as unknown as ChaosAction['type']:
+      case 'RECOVER_NODE':
         if (node) {
           node.recover()
           node.isLeakingMemory = false
-          node.memoryPercent = 10
         }
         break
     }
@@ -437,6 +559,7 @@ class SimulationEngine {
   private tick() {
     this.currentTimeSec += (this.tickIntervalMs / 1000) * this.speedMultiplier
 
+    // Fire scheduled chaos events
     this.scheduledEvents
       .filter(e => e.timeSec <= this.currentTimeSec)
       .forEach(e => this.injectChaos(e.action))
@@ -450,7 +573,9 @@ class SimulationEngine {
         this.logEvent({
           type: 'NODE_STATE_CHANGE',
           message: `${node.id} → ${node.health}`,
-          severity: node.health === 'FAILED' ? 'CRITICAL' : node.health === 'UNHEALTHY' ? 'WARNING' : 'INFO',
+          severity: node.health === 'FAILED' ? 'CRITICAL'
+            : node.health === 'UNHEALTHY' ? 'WARNING'
+            : 'INFO',
           nodeId: node.id,
         })
       }
@@ -472,31 +597,33 @@ class SimulationEngine {
     const entryNodes = allNodeIds.filter(id => !targetNodeIds.has(id))
 
     if (entryNodes.length === 0) {
-      allNodeIds.slice(0, 1).forEach(id => this.propagateRequest(id, currentRps))
+      const first = allNodeIds[0]
+      if (first) this.propagateRequest(first, currentRps, new Set())
     } else {
       const rpsPerEntry = currentRps / entryNodes.length
       for (const entryId of entryNodes) {
-        this.propagateRequest(entryId, rpsPerEntry)
+        this.propagateRequest(entryId, rpsPerEntry, new Set())
       }
     }
 
-    // Process asynchronous MESSAGE_QUEUE nodes to pull messages and send downstream
+    // Async MESSAGE_QUEUE draining
     this.nodes.forEach((node) => {
       if (node.config.type === 'MESSAGE_QUEUE') {
         const downstreamIds = this.adjacency.get(node.id) ?? []
         for (const downstreamId of downstreamIds) {
-          const consumerNode = this.nodes.get(downstreamId)
-          if (consumerNode && consumerNode.health !== 'FAILED') {
-            const pullCapacityRps = 40 * consumerNode.healthyReplicas // 40 RPS per replica
-            const pullAmount = Math.min(node.queueDepth, pullCapacityRps * (this.tickIntervalMs / 1000))
+          const consumer = this.nodes.get(downstreamId)
+          if (consumer && consumer.health !== 'FAILED') {
+            const pullCapacity = 40 * consumer.healthyReplicas
+            const pullAmount = Math.min(node.queueDepth, pullCapacity * (this.tickIntervalMs / 1000))
             node.queueDepth -= pullAmount
             const pullRps = pullAmount * (1000 / this.tickIntervalMs)
 
-            // Record on the connecting edge
-            const edgeConfig = this.topology.edges.find(e => e.sourceId === node.id && e.targetId === downstreamId)
+            const edgeConfig = this.topology.edges.find(
+              e => e.sourceId === node.id && e.targetId === downstreamId
+            )
             if (edgeConfig) {
-              const edge = this.edges.get(edgeConfig.id)
-              edge?.addRequest(10, false)
+              const edgeState = this.edges.get(edgeConfig.id)
+              edgeState?.addRequest(10, false)
             }
 
             this.propagateRequest(downstreamId, pullRps, new Set([node.id]))
@@ -506,8 +633,8 @@ class SimulationEngine {
     })
   }
 
-  private propagateRequest(nodeId: string, rps: number, visited = new Set<string>()) {
-    if (visited.has(nodeId) || visited.size > 10) return
+  private propagateRequest(nodeId: string, rps: number, visited: Set<string>) {
+    if (visited.has(nodeId) || visited.size > 12) return
     visited.add(nodeId)
 
     const node = this.nodes.get(nodeId)
@@ -518,22 +645,124 @@ class SimulationEngine {
       return
     }
 
-    if (node.config.type === 'MESSAGE_QUEUE') {
-      // Accumulate requests in queue
-      const addedRequests = rps * (this.tickIntervalMs / 1000)
-      const isFull = node.queueDepth >= (node.config.maxQueueDepth ?? 1000)
-      node.queueDepth = Math.min(node.config.maxQueueDepth ?? 1000, node.queueDepth + addedRequests)
-      node.addRequest(10, isFull)
-      return // Asynchronous queueing, do not propagate downstream synchronously!
+    // ── CDN node — cache hit model ────────────────────────────
+    if (node.config.type === 'CDN') {
+      const warmupThreshold = 200 // requests before cache is warm
+      node.cacheWarmupRequests += rps * (this.tickIntervalMs / 1000)
+      node.cacheWarmedUp = node.cacheWarmupRequests >= warmupThreshold
+      // Hit rate ramps from 0% to 85% over warmup period
+      node.cacheHitRate = node.cacheWarmedUp
+        ? 0.85
+        : (node.cacheWarmupRequests / warmupThreshold) * 0.85
+
+      const missRps = rps * (1 - node.cacheHitRate)
+      const hitLatency = 2 + Math.random() * 3   // CDN edge: ~2–5ms
+      const missLatency = 20 + Math.random() * 10
+      // Record cache hit requests (low latency)
+      const hitCount = Math.round((rps - missRps) * (this.tickIntervalMs / 1000))
+      for (let i = 0; i < hitCount; i++) node.addRequest(hitLatency, false)
+
+      // Only propagate cache misses downstream
+      if (missRps > 0) {
+        node.addRequest(missLatency, false)
+        const downstreamIds = this.adjacency.get(nodeId) ?? []
+        for (const downstreamId of downstreamIds) {
+          this.propagateRequest(downstreamId, missRps, new Set(visited))
+        }
+      }
+      return
     }
 
+    // ── LOAD_BALANCER node — distribute to downstream ─────────
+    if (node.config.type === 'LOAD_BALANCER') {
+      node.addRequest(1 + Math.random() * 2, false)
+      const downstreamIds = (this.adjacency.get(nodeId) ?? [])
+        .filter(id => {
+          const dn = this.nodes.get(id)
+          return dn && dn.health !== 'FAILED'
+        })
+
+      if (downstreamIds.length === 0) {
+        // All backends failed — LB returns error
+        node.addRequest(0, true)
+        return
+      }
+
+      if (node.config.algorithm === 'ROUND_ROBIN' || !node.config.algorithm) {
+        // True round-robin using per-node index counter
+        node.lbRoundRobinIndex = node.lbRoundRobinIndex % downstreamIds.length
+        const target = downstreamIds[node.lbRoundRobinIndex]
+        node.lbRoundRobinIndex++
+        this.propagateRequest(target, rps, new Set(visited))
+      } else if (node.config.algorithm === 'LEAST_CONNECTIONS') {
+        // Route to whichever downstream has the lowest RPS (as proxy for open connections)
+        const target = downstreamIds.reduce((best, id) => {
+          const n = this.nodes.get(id)!
+          const b = this.nodes.get(best)!
+          return n.requestsPerSec < b.requestsPerSec ? id : best
+        })
+        this.propagateRequest(target, rps, new Set(visited))
+      } else {
+        // IP_HASH or default — deterministic random split
+        const rpsEach = rps / downstreamIds.length
+        for (const id of downstreamIds) {
+          this.propagateRequest(id, rpsEach, new Set(visited))
+        }
+      }
+      return
+    }
+
+    // ── MESSAGE_QUEUE node — accumulate ───────────────────────
+    if (node.config.type === 'MESSAGE_QUEUE') {
+      const maxQueue = node.config.maxQueueDepth ?? 1000
+      const addedRequests = rps * (this.tickIntervalMs / 1000)
+      const isFull = node.queueDepth >= maxQueue
+      node.queueDepth = Math.min(maxQueue, node.queueDepth + addedRequests)
+      node.addRequest(10, isFull, isFull)
+      return // async — do not propagate synchronously
+    }
+
+    // ── EXTERNAL_SERVICE node — reliability model ─────────────
+    if (node.config.type === 'EXTERNAL_SERVICE') {
+      const reliab = (node.config.reliabilityPercent ?? 95) / 100
+      const extLatency = node.config.externalLatencyMs ?? 200
+      // Add realistic variance — external latency is bursty
+      const latency = extLatency * (0.5 + Math.random() * 1.5)
+      const isError = Math.random() > reliab
+      node.addRequest(latency, isError)
+      // External services don't propagate further
+      return
+    }
+
+    // ── Back-pressure: request shedding ───────────────────────
+    // If the node's queue is full, shed the request (HTTP 503)
+    if (node.isOverloaded()) {
+      node.addRequest(0, true, true)
+      return
+    }
+
+    // ── Normal SERVICE / API_GATEWAY / DATABASE processing ────
     const baseLatency = node.config.processingTimeMs ?? 50
-    const loadFactor = 1 + (node.cpuPercent / 100) * 3
-    const latency = baseLatency * loadFactor + Math.random() * 20
-    const isError = Math.random() < (node.errorRatePercent / 100) * 0.3
+    // Latency increases under CPU pressure (queuing theory: M/M/1 model approximation)
+    const utilization = Math.min(0.99, node.cpuPercent / 100)
+    const queuingFactor = 1 / Math.max(0.01, 1 - utilization)  // diverges near saturation
+    const latency = baseLatency * Math.min(queuingFactor, 20) + Math.random() * 10
+
+    // Error rate: base error + degradation under load
+    const baseErrorRate = node.errorRatePercent / 100
+    const isError = Math.random() < baseErrorRate * 0.3
 
     node.addRequest(latency, isError)
 
+    // ── Queue fill under load ─────────────────────────────────
+    const capacity = (node.config.cpuLimit ?? 100) * (node.healthyReplicas / Math.max(1, node.config.replicas ?? 1))
+    const excessRps = Math.max(0, rps - capacity)
+    if (excessRps > 0) {
+      const maxQueue = node.config.maxQueueDepth ?? 500
+      node.queueDepth = Math.min(maxQueue, node.queueDepth + excessRps * (this.tickIntervalMs / 1000))
+    }
+
+    // ── Propagate downstream ───────────────────────────────────
     const downstreamIds = this.adjacency.get(nodeId) ?? []
     for (const downstreamId of downstreamIds) {
       const edgeConfig = this.topology.edges.find(
@@ -541,56 +770,102 @@ class SimulationEngine {
       )
       if (!edgeConfig) continue
 
-      const edge = this.edges.get(edgeConfig.id)!
+      const edgeState = this.edges.get(edgeConfig.id)!
       const cb = this.circuitBreakers.get(edgeConfig.id)
 
-      if (cb?.isOpen()) { edge.circuitBreakerState = 'OPEN'; continue }
-      if (edge.isPartitioned) continue
-      if (Math.random() < edge.packetLossPercent / 100) continue
+      // Circuit breaker — OPEN means fast-fail
+      if (cb?.isOpen()) {
+        edgeState.circuitBreakerState = 'OPEN'
+        // Record the fast-fail as an error on the edge
+        edgeState.addRequest(1, true)
+        continue
+      }
+
+      // Network partition
+      if (edgeState.isPartitioned) {
+        edgeState.addRequest(0, true)
+        continue
+      }
+
+      // Bandwidth throttle — reduce effective RPS
+      const effectiveRps = rps * edgeState.effectivePassRate()
+      if (effectiveRps <= 0) {
+        edgeState.addRequest(0, true)
+        continue
+      }
+
+      // Packet loss — probabilistic drop
+      if (Math.random() < edgeState.packetLossPercent / 100) {
+        edgeState.addRequest(0, true)
+        continue
+      }
 
       const downstreamNode = this.nodes.get(downstreamId)
-      // Check if downstream queue is full
-      const isQueueFull = downstreamNode?.config.type === 'MESSAGE_QUEUE' && downstreamNode.queueDepth >= (downstreamNode.config.maxQueueDepth ?? 1000)
+      const isQueueFull = downstreamNode?.isOverloaded() ?? false
 
-      const edgeLatency = 5 + edge.addedLatencyMs + Math.random() * 5
-      const edgeError = isQueueFull || (edgeConfig.timeoutMs ? edgeLatency > edgeConfig.timeoutMs : false)
+      const edgeBaseLatency = 3 + edgeState.addedLatencyMs + Math.random() * 4
+      // Timeout check
+      const timedOut = edgeConfig.timeoutMs ? edgeBaseLatency > edgeConfig.timeoutMs : false
+      const edgeError = isQueueFull || timedOut || isError
 
-      edge.addRequest(edgeLatency, edgeError)
+      edgeState.addRequest(edgeBaseLatency, edgeError)
 
       const cbChanged = cb?.recordResult(edgeError, this.currentTimeSec)
       if (cbChanged && cb) {
-        edge.circuitBreakerState = cb.state
+        edgeState.circuitBreakerState = cb.state
         this.logEvent({
           type: 'CIRCUIT_BREAKER',
-          message: `Circuit breaker ${cb.state} on edge ${edgeConfig.sourceId}→${edgeConfig.targetId}`,
+          message: `Circuit breaker ${cb.state} on ${edgeConfig.sourceId}→${edgeConfig.targetId}`,
           severity: cb.state === 'OPEN' ? 'CRITICAL' : 'INFO',
           edgeId: edgeConfig.id,
         })
       }
 
-      let retryMultiplier = 1
+      // Retry amplification with backoff model
       if (edgeError && (edgeConfig.maxRetries ?? 0) > 0) {
-        retryMultiplier = 1 + (edgeConfig.maxRetries ?? 0)
+        const retries = edgeConfig.maxRetries ?? 0
+        let retryRps = effectiveRps * retries
+
+        if (edgeConfig.retryBackoff === 'EXPONENTIAL_JITTER') {
+          // Exponential backoff with ±30% jitter reduces amplification over time
+          const jitterFactor = 0.7 + Math.random() * 0.6
+          retryRps = effectiveRps * retries * jitterFactor * 0.5
+        } else if (edgeConfig.retryBackoff === 'EXPONENTIAL') {
+          retryRps = effectiveRps * retries * 0.6
+        }
+        // FIXED backoff: full retry amplification
+        this.propagateRequest(downstreamId, retryRps, new Set(visited))
+      } else {
+        this.propagateRequest(downstreamId, effectiveRps, new Set(visited))
       }
-      this.propagateRequest(downstreamId, rps * retryMultiplier, new Set(visited))
     }
   }
 
   private calculateCurrentRps(): number {
     const { baseRps, pattern, spikeMultiplier, rampTargetRps, rampDurationSecs } = this.trafficProfile
     switch (pattern) {
-      case 'CONSTANT':   return baseRps
-      case 'SINUSOIDAL': return baseRps * (0.5 + 0.5 * Math.sin(this.currentTimeSec * 0.1))
+      case 'CONSTANT':
+        return baseRps
+      case 'SINUSOIDAL':
+        // Realistic: daily traffic wave (peaks and troughs)
+        return baseRps * (0.4 + 0.6 * (0.5 + 0.5 * Math.sin(this.currentTimeSec * 0.05)))
       case 'SPIKE': {
         const spikeAt = 60
-        return this.currentTimeSec > spikeAt && this.currentTimeSec < spikeAt + 30
-          ? baseRps * (spikeMultiplier ?? 10) : baseRps
+        const spikeDuration = 30
+        if (this.currentTimeSec > spikeAt && this.currentTimeSec < spikeAt + spikeDuration) {
+          // Spike ramps up and down naturally
+          const t = (this.currentTimeSec - spikeAt) / spikeDuration
+          const envelope = Math.sin(t * Math.PI)
+          return baseRps + envelope * baseRps * ((spikeMultiplier ?? 10) - 1)
+        }
+        return baseRps
       }
       case 'RAMP': {
         const p = Math.min(1, this.currentTimeSec / (rampDurationSecs ?? 120))
         return baseRps + p * ((rampTargetRps ?? baseRps * 5) - baseRps)
       }
-      default: return baseRps
+      default:
+        return baseRps
     }
   }
 
@@ -601,7 +876,7 @@ class SimulationEngine {
       ...event,
     }
     this.eventLog.unshift(full)
-    if (this.eventLog.length > 200) this.eventLog.pop()
+    if (this.eventLog.length > 300) this.eventLog.pop()
     self.postMessage({ type: 'EVENT', event: full })
   }
 
@@ -616,11 +891,13 @@ class SimulationEngine {
 
     return {
       status: this.status,
-      currentTimeSec: Math.round(this.currentTimeSec),
+      currentTimeSec: Math.round(this.currentTimeSec * 10) / 10,
       speedMultiplier: this.speedMultiplier,
-      totalRps: Math.round(allNodes.reduce((s, n) => s + n.requestsPerSec, 0)),
+      totalRps: Math.round(activeNodes.reduce((s, n) => s + n.requestsPerSec, 0)),
       totalErrorRatePercent: activeNodes.length > 0
-        ? Math.round(activeNodes.reduce((s, n) => s + n.errorRatePercent, 0) / activeNodes.length * 10) / 10
+        ? Math.round(
+            activeNodes.reduce((s, n) => s + n.errorRatePercent, 0) / activeNodes.length * 10
+          ) / 10
         : 100,
       systemP99LatencyMs: Math.max(0, ...allNodes.map(n => n.p99LatencyMs)),
       failedNodeCount: allNodes.filter(n => n.health === 'FAILED').length,
@@ -646,8 +923,8 @@ self.onmessage = (event: MessageEvent) => {
     case 'PAUSE':   engine.pause(); break
     case 'RESUME':  engine.resume(); break
     case 'RESET':   engine.reset(); break
-    case 'SET_SPEED':   engine.setSpeed(payload.multiplier); break
-    case 'SET_TRAFFIC': engine.setTraffic(payload.profile); break
+    case 'SET_SPEED':    engine.setSpeed(payload.multiplier); break
+    case 'SET_TRAFFIC':  engine.setTraffic(payload.profile); break
     case 'INJECT_CHAOS': engine.injectChaos(payload.action); break
     case 'SCHEDULE_CHAOS':
       engine.scheduleEvent(payload.timeSec, payload.action)

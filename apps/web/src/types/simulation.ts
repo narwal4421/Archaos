@@ -14,6 +14,9 @@ export interface NodeRuntimeState {
   activeConnections: number
   healthyReplicas: number
   blastRadiusPercent?: number
+  // New realism fields
+  droppedRps: number
+  saturationPercent: number
 }
 
 export interface EdgeRuntimeState {
@@ -25,6 +28,7 @@ export interface EdgeRuntimeState {
   addedLatencyMs: number
   packetLossPercent: number
   isPartitioned: boolean
+  bandwidthThrottlePercent: number
 }
 
 export interface SimulationState {
