@@ -525,8 +525,16 @@ export function Learn() {
                 </div>
               )}
               {answerCorrect === false && (
-                <div className="text-xs text-[#EF4444] font-semibold flex items-center gap-1.5 animate-fade-in">
-                  <AlertCircle size={14} /> Incorrect — think about the bottleneck and retry.
+                <div className="space-y-3 animate-fade-in">
+                  <div className="text-xs text-[#EF4444] font-semibold flex items-center gap-1.5">
+                    <AlertCircle size={14} /> Incorrect — think about the bottleneck and retry.
+                  </div>
+                  <button
+                    onClick={handleResume}
+                    className="w-full py-2 bg-[#1A1A1A] hover:bg-[#222222] border border-[#333333] hover:border-[#444444] rounded-lg text-xs text-[#888888] hover:text-white font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                  >
+                    Skip Question & Continue <ChevronRight size={14} />
+                  </button>
                 </div>
               )}
             </div>
