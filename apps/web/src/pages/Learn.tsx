@@ -3,7 +3,7 @@
 // animated quiz checkpoints, mission-completion sequence.
 // Logic is 100% preserved from the original.
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useCanvasStore } from '../stores/canvasStore'
 import { useSimulation } from '../hooks/useSimulation'
@@ -521,11 +521,23 @@ export function Learn() {
   const [chaosFlash, setChaosFlash] = useState(false)
   const [chaosLog, setChaosLog] = useState<{ text: string; color: string; ts: number }[]>([])
   const [currentQuestion, setCurrentQuestion] = useState<WalkthroughQuestion | null>(null)
-  const [completed, setCompleted] = useState(false)
+  // `completed` is derived — no useState needed. It recomputes automatically
+  // when currentTimeSec or executedWalkthroughSet change, avoiding any
+  // synchronous setState calls inside effects.
 
   const executedChaos = useRef<Set<number>>(new Set())
   // useState (not useRef) so reads during render are safe and trigger re-renders
   const [executedWalkthroughSet, setExecutedWalkthroughSet] = useState<Set<number>>(() => new Set())
+
+  const completed = useMemo(() => {
+    if (!scenario) return false
+    const maxTime = Math.max(...(scenario.walkthroughScript || []).map((w: WalkthroughQuestion) => w.atSec), 30)
+    return (
+      currentTimeSec >= maxTime &&
+      executedWalkthroughSet.size === (scenario.walkthroughScript || []).length &&
+      executedWalkthroughSet.size > 0
+    )
+  }, [scenario, currentTimeSec, executedWalkthroughSet])
 
   useEffect(() => { setTimeout(() => setMounted(true), 50) }, [])
 
@@ -557,7 +569,6 @@ export function Learn() {
     executedChaos.current.clear()
     setExecutedWalkthroughSet(new Set())
     setCurrentQuestion(null)
-    setCompleted(false)
     setChaosLog([])
   }, [reset])
 
@@ -596,11 +607,6 @@ export function Learn() {
         setCurrentQuestion(item)
       }
     })
-
-    const maxTime = Math.max(...(scenario.walkthroughScript || []).map(w => w.atSec), 30)
-    if (currentTimeSec >= maxTime && executedWalkthroughSet.size === (scenario.walkthroughScript || []).length) {
-      setCompleted(true)
-    }
   }, [currentTimeSec, scenario, isSimRunning, injectChaos, pause, executedWalkthroughSet])
 
   const formatTime = (sec: number) => {
