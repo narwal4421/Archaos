@@ -74,7 +74,9 @@ export class NarrationGateway
 
   private getOpenAIClient(): OpenAI | null {
     const provider = this.getProviderInfo();
-    this.logger.debug(`AI provider configured: ${provider ? (provider.isOpenRouter ? 'OpenRouter' : 'OpenAI') : 'none (demo mode)'}`);
+    this.logger.debug(
+      `AI provider configured: ${provider ? (provider.isOpenRouter ? 'OpenRouter' : 'OpenAI') : 'none (demo mode)'}`,
+    );
     if (!provider) return null;
     return new OpenAI({
       apiKey: provider.key,
@@ -95,7 +97,9 @@ export class NarrationGateway
     );
 
     if (entry.timestamps.length >= this.rateLimitMaxEvents) {
-      this.logger.warn(`Client ${clientId} exceeded narration rate limit (${this.rateLimitMaxEvents} req/${this.rateLimitWindowMs / 1000}s)`);
+      this.logger.warn(
+        `Client ${clientId} exceeded narration rate limit (${this.rateLimitMaxEvents} req/${this.rateLimitWindowMs / 1000}s)`,
+      );
       return false;
     }
 
@@ -139,7 +143,10 @@ export class NarrationGateway
     try {
       await this.streamNarration(client, data.event, data.state, data.topology);
     } catch (err) {
-      this.logger.error('Narration stream error', err instanceof Error ? err.stack : String(err));
+      this.logger.error(
+        'Narration stream error',
+        err instanceof Error ? err.stack : String(err),
+      );
       client.emit('narration:error', {
         message: 'Failed to generate narration',
       });
@@ -247,7 +254,9 @@ Never be generic. Every word should describe THIS specific topology's current st
 
     const firstTokenTimer = setTimeout(() => {
       if (!firstTokenReceived && modelUsed === DYNAMIC_MODELS.primary) {
-        this.logger.warn(`Primary model too slow (>${FIRST_TOKEN_TIMEOUT_MS}ms) — switching to fallback`);
+        this.logger.warn(
+          `Primary model too slow (>${FIRST_TOKEN_TIMEOUT_MS}ms) — switching to fallback`,
+        );
         void attemptStream(DYNAMIC_MODELS.fallback)
           .then((fb) => {
             fallbackStream = fb;
@@ -255,7 +264,10 @@ Never be generic. Every word should describe THIS specific topology's current st
             client.emit('narration:model', { model: modelUsed });
           })
           .catch((fallbackErr: unknown) => {
-            this.logger.error('Fallback model also failed', String(fallbackErr));
+            this.logger.error(
+              'Fallback model also failed',
+              String(fallbackErr),
+            );
             client.emit('narration:error', {
               message: 'Both models unavailable. Try again in a moment.',
             });
