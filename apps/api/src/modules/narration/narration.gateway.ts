@@ -15,13 +15,6 @@ import type {
 } from 'openai/resources/chat/completions';
 import type { Stream } from 'openai/streaming';
 
-const MODELS = {
-  primary: 'openai/gpt-oss-120b',
-  fallback: 'moonshotai/kimi-k2.6',
-} as const;
-
-type ModelKey = (typeof MODELS)[keyof typeof MODELS];
-
 const FIRST_TOKEN_TIMEOUT_MS = 5000;
 
 interface NarrationEvent {
@@ -72,7 +65,9 @@ export class NarrationGateway
     if (!provider) return null;
     return new OpenAI({
       apiKey: provider.key,
-      baseURL: provider.isOpenRouter ? 'https://openrouter.ai/api/v1' : undefined,
+      baseURL: provider.isOpenRouter
+        ? 'https://openrouter.ai/api/v1'
+        : undefined,
     });
   }
 
@@ -191,7 +186,7 @@ Never be generic. Every word should describe THIS specific topology's current st
     };
 
     const provider = this.getProviderInfo();
-    const DYNAMIC_MODELS = provider?.isOpenRouter 
+    const DYNAMIC_MODELS = provider?.isOpenRouter
       ? { primary: 'openai/gpt-4o-mini', fallback: 'moonshotai/kimi-k2.6' }
       : { primary: 'gpt-4o-mini', fallback: 'gpt-3.5-turbo' };
 
