@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Scenario" ADD COLUMN IF NOT EXISTS "upvotes" INTEGER NOT NULL DEFAULT 0;
