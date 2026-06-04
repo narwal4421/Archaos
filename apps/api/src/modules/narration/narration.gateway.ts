@@ -63,11 +63,13 @@ export class NarrationGateway
   private rateLimitMap = new Map<string, RateLimitEntry>();
 
   private getProviderInfo() {
-    if (process.env.OPENROUTER_API_KEY) {
-      return { key: process.env.OPENROUTER_API_KEY, isOpenRouter: true };
+    const orKey = process.env.OPENROUTER_API_KEY;
+    if (orKey && orKey.trim() !== '' && orKey !== 'your_openrouter_key_here' && !orKey.startsWith('sk-or-...')) {
+      return { key: orKey, isOpenRouter: true };
     }
-    if (process.env.OPENAI_API_KEY) {
-      return { key: process.env.OPENAI_API_KEY, isOpenRouter: false };
+    const oaKey = process.env.OPENAI_API_KEY;
+    if (oaKey && oaKey.trim() !== '' && oaKey !== 'your_openai_key_here' && !oaKey.startsWith('sk-...')) {
+      return { key: oaKey, isOpenRouter: false };
     }
     return null;
   }
