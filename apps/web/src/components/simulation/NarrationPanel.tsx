@@ -18,8 +18,15 @@ export function NarrationPanel() {
 
   const displayText = isStreaming
     ? (() => {
-        try { return JSON.parse(streamBuffer)?.narration || streamBuffer }
-        catch { return streamBuffer }
+        try { 
+          return JSON.parse(streamBuffer)?.narration || streamBuffer 
+        } catch { 
+          const match = streamBuffer.match(/"narration"\s*:\s*"((?:[^"\\]|\\.)*)/)
+          if (match) {
+            return match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"')
+          }
+          return streamBuffer 
+        }
       })()
     : currentEntry?.narration || ''
 

@@ -56,13 +56,23 @@ export class NarrationGateway
   @WebSocketServer()
   server: Server;
 
+  private getProviderInfo() {
+    if (process.env.OPENROUTER_API_KEY) {
+      return { key: process.env.OPENROUTER_API_KEY, isOpenRouter: true };
+    }
+    if (process.env.OPENAI_API_KEY) {
+      return { key: process.env.OPENAI_API_KEY, isOpenRouter: false };
+    }
+    return null;
+  }
+
   private getOpenAIClient(): OpenAI | null {
-    const apiKey = process.env.OPENROUTER_API_KEY ?? process.env.OPENAI_API_KEY;
-    console.log('API key present:', !!apiKey);
-    if (!apiKey) return null;
+    const provider = this.getProviderInfo();
+    console.log('API key present:', !!provider);
+    if (!provider) return null;
     return new OpenAI({
-      apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
+      apiKey: provider.key,
+      baseURL: provider.isOpenRouter ? 'https://openrouter.ai/api/v1' : undefined,
     });
   }
 
@@ -180,33 +190,38 @@ Never be generic. Every word should describe THIS specific topology's current st
       );
     };
 
-    let modelUsed: ModelKey = MODELS.primary;
+    const provider = this.getProviderInfo();
+    const DYNAMIC_MODELS = provider?.isOpenRouter 
+      ? { primary: 'openai/gpt-4o-mini', fallback: 'moonshotai/kimi-k2.6' }
+      : { primary: 'gpt-4o-mini', fallback: 'gpt-3.5-turbo' };
+
+    let modelUsed: string = DYNAMIC_MODELS.primary;
     let stream: Stream<ChatCompletionChunk>;
     let fallbackStream: Stream<ChatCompletionChunk> | null = null;
     let firstTokenReceived = false;
     const fullResponse: string[] = [];
 
     try {
-      stream = await attemptStream(MODELS.primary);
-      modelUsed = MODELS.primary;
+      stream = await attemptStream(DYNAMIC_MODELS.primary);
+      modelUsed = DYNAMIC_MODELS.primary;
     } catch (initErr: unknown) {
       const status = (initErr as { status?: number }).status;
       console.warn(
         `Primary model failed: ${status?.toString() ?? 'unknown'} — switching to fallback`,
       );
-      stream = await attemptStream(MODELS.fallback);
-      modelUsed = MODELS.fallback;
+      stream = await attemptStream(DYNAMIC_MODELS.fallback);
+      modelUsed = DYNAMIC_MODELS.fallback;
     }
 
     client.emit('narration:model', { model: modelUsed });
 
     const firstTokenTimer = setTimeout(() => {
-      if (!firstTokenReceived && modelUsed === MODELS.primary) {
+      if (!firstTokenReceived && modelUsed === DYNAMIC_MODELS.primary) {
         console.warn('Primary model too slow — switching to fallback');
-        void attemptStream(MODELS.fallback)
+        void attemptStream(DYNAMIC_MODELS.fallback)
           .then((fb) => {
             fallbackStream = fb;
-            modelUsed = MODELS.fallback;
+            modelUsed = DYNAMIC_MODELS.fallback;
             client.emit('narration:model', { model: modelUsed });
           })
           .catch((fallbackErr: unknown) => {
@@ -232,12 +247,12 @@ Never be generic. Every word should describe THIS specific topology's current st
         client.emit('narration:token', { token });
       }
     } catch {
-      if (modelUsed === MODELS.primary && !fallbackStream) {
+      if (modelUsed === DYNAMIC_MODELS.primary && !fallbackStream) {
         console.warn('Primary stream died mid-way — switching to fallback');
         clearTimeout(firstTokenTimer);
         try {
-          const recovery = await attemptStream(MODELS.fallback);
-          modelUsed = MODELS.fallback;
+          const recovery = await attemptStream(DYNAMIC_MODELS.fallback);
+          modelUsed = DYNAMIC_MODELS.fallback;
           client.emit('narration:model', { model: modelUsed });
           for await (const part of recovery) {
             const token = part.choices[0]?.delta?.content ?? '';
