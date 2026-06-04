@@ -19,11 +19,13 @@ import { NodeConfigPanel } from '../components/canvas/NodeConfigPanel'
 import { EdgeConfigPanel } from '../components/canvas/EdgeConfigPanel'
 import { api } from '../lib/api'
 import { ImportDialog } from '../components/canvas/ImportDialog'
+import { ChaosScriptEditor } from '../components/canvas/ChaosScriptEditor'
+import { ShareScenarioModal } from '../components/canvas/ShareScenarioModal'
 import { autoLayoutTopology } from '../utils/infrastructureParser'
 import {
   ArrowLeft, Pencil, Save, Cpu, Database, Layers, GitMerge,
   Zap, Globe, Server, ChevronDown, Activity, Cpu as CpuIcon,
-  TerminalSquare, Clock, Upload,
+  TerminalSquare, Clock, Upload, Code, Share2,
 } from 'lucide-react'
 import type { NodeConfig, EdgeConfig, NodeType } from '../types/topology'
 
@@ -482,8 +484,10 @@ export function Editor() {
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
   const [showImport, setShowImport] = useState(false)
-  const [topologyVersions, setTopologyVersions] = useState<{ id: string; name: string; timestamp: string; nodes: any[]; edges: any[] }[]>([])
+  const [topologyVersions, setTopologyVersions] = useState<{ id: string; name: string; timestamp: string; nodes: NodeConfig[]; edges: EdgeConfig[] }[]>([])
   const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null)
+  const [showChaosScript, setShowChaosScript] = useState(false)
+  const [showShare, setShowShare] = useState(false)
 
   const handleSaveVersion = () => {
     const nodeConfigs = Object.values(canvasStore.nodeConfigs)
@@ -496,6 +500,13 @@ export function Editor() {
       edges: edgeConfigs,
     }
     setTopologyVersions(prev => [...prev, newVersion])
+  }
+
+  const handleChaosScriptExecute = (steps: { atSec: number; type: string; targetId: string; value?: number; durationSecs?: number }[]) => {
+    // Dispatch each step as a scheduled custom event; the simulation worker picks these up
+    steps.forEach(step => {
+      window.dispatchEvent(new CustomEvent('archaos:scheduled-chaos', { detail: step }))
+    })
   }
 
   const handleAutoLayout = () => {
@@ -732,6 +743,42 @@ export function Editor() {
           <GitMerge size={12} /> AUTO LAYOUT
         </button>
 
+        {/* ── Chaos Script button ── */}
+        <button
+          onClick={() => setShowChaosScript(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 8,
+            background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+            color: '#EF4444', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            fontFamily: "'JetBrains Mono',monospace", transition: 'all 0.18s',
+            marginLeft: 6,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.15)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.5)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.25)' }}
+          title="Write custom YAML chaos scripts"
+        >
+          <Code size={12} /> CHAOS SCRIPT
+        </button>
+
+        {/* ── Share to marketplace button ── */}
+        <button
+          onClick={() => setShowShare(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 8,
+            background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.25)',
+            color: '#8B9CF8', cursor: 'pointer', fontSize: 11, fontWeight: 700,
+            fontFamily: "'JetBrains Mono',monospace", transition: 'all 0.18s',
+            marginLeft: 6,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.15)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.5)' }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(99,102,241,0.08)'; e.currentTarget.style.borderColor = 'rgba(99,102,241,0.25)' }}
+          title="Publish this topology to the marketplace"
+        >
+          <Share2 size={12} /> SHARE
+        </button>
+
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
@@ -879,8 +926,8 @@ export function Editor() {
                       {(() => {
                         const currentNodes = Object.values(canvasStore.nodeConfigs)
                         const diffVer = topologyVersions[selectedDiffIndex]
-                        const added = currentNodes.filter(n => !diffVer.nodes.some((dn: any) => dn.id === n.id))
-                        const removed = diffVer.nodes.filter((dn: any) => !currentNodes.some(n => n.id === dn.id))
+                        const added = currentNodes.filter(n => !diffVer.nodes.some((dn) => dn.id === n.id))
+                        const removed = diffVer.nodes.filter((dn) => !currentNodes.some(n => n.id === dn.id))
                         
                         return (
                           <>
@@ -1032,6 +1079,25 @@ export function Editor() {
 
       {/* ── IMPORT DIALOG ── */}
       {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
+
+      {/* ── CHAOS SCRIPT EDITOR ── */}
+      {showChaosScript && (
+        <ChaosScriptEditor
+          onClose={() => setShowChaosScript(false)}
+          onExecute={(steps) => { handleChaosScriptExecute(steps); setShowChaosScript(false) }}
+          nodeIds={Object.keys(canvasStore.nodeConfigs)}
+        />
+      )}
+
+      {/* ── SHARE SCENARIO MODAL ── */}
+      {showShare && (
+        <ShareScenarioModal
+          onClose={() => setShowShare(false)}
+          nodes={Object.values(canvasStore.nodeConfigs)}
+          edges={Object.values(canvasStore.edgeConfigs)}
+          topologyName={topologyName || 'My Topology'}
+        />
+      )}
     </div>
   )
 }

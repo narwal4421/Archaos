@@ -7,8 +7,22 @@ import { Navbar } from '../components/layout/Navbar'
 import { ChevronRight, Zap, Terminal, BookOpen, Heart } from 'lucide-react'
 import { api } from '../lib/api'
 
+interface DisplayScenario {
+  id: string
+  name: string
+  desc: string
+  category: 'RESILIENCE' | 'TRAFFIC' | 'DATABASE' | 'CACHING'
+  difficulty: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED'
+  color: string
+  highlights: string[]
+  nodes: number
+  edges: number
+  pattern: string
+  upvotes?: number
+}
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const SCENARIOS = [
+const SCENARIOS: DisplayScenario[] = [
   {
     id: 'the-cascade',
     name: 'The Cascade',
@@ -274,7 +288,7 @@ function BackgroundField() {
 }
 
 // ─── Scenario card ────────────────────────────────────────────────────────────
-function ScenarioCard({ s, idx, visible, onUpvote }: { s: any; idx: number; visible: boolean; onUpvote: (id: string) => void }) {
+function ScenarioCard({ s, idx, visible, onUpvote }: { s: DisplayScenario; idx: number; visible: boolean; onUpvote: (id: string) => void }) {
   const navigate = useNavigate()
   const [hovered, setHovered] = useState(false)
   const diff = DIFFICULTY_META[s.difficulty as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED']
@@ -519,7 +533,7 @@ export function Scenarios() {
   const [cardsVisible, setCardsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
-  const [scenarios, setScenarios] = useState<any[]>(SCENARIOS)
+  const [scenarios, setScenarios] = useState<DisplayScenario[]>(SCENARIOS)
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 50)
@@ -532,8 +546,8 @@ export function Scenarios() {
           id: c.id,
           name: c.name,
           desc: c.description,
-          category: (c.category || 'RESILIENCE').toUpperCase() as any,
-          difficulty: (c.difficulty || 'BEGINNER').toUpperCase() as any,
+          category: (c.category || 'RESILIENCE').toUpperCase() as DisplayScenario['category'],
+          difficulty: (c.difficulty || 'BEGINNER').toUpperCase() as DisplayScenario['difficulty'],
           color: c.category === 'CASCADE' ? '#EF4444' : c.category === 'RETRY_STORM' ? '#F59E0B' : '#6366F1',
           highlights: ['Community', 'Visual Sim'],
           nodes: 5,

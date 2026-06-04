@@ -1,6 +1,18 @@
 import { useAuthStore } from '../stores/authStore'
 import type { Topology, Scenario, NodeConfig, EdgeConfig } from '../types/topology'
 
+interface CreateScenarioPayload {
+  name: string
+  description: string
+  category: string
+  difficulty: string
+  isPublic: boolean
+  nodesJson: string
+  edgesJson: string
+  chaosScript: string
+  walkthroughScript: string
+}
+
 const BASE_URL = '/api'
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -59,7 +71,7 @@ export const api = {
   scenarios: {
     list: () => request<Scenario[]>('/scenarios'),
     get: (id: string) => request<Scenario>(`/scenarios/${id}`),
-    create: (data: any) => request<Scenario>('/scenarios', {
+    create: (data: CreateScenarioPayload) => request<Scenario>('/scenarios', {
       method: 'POST',
       body: JSON.stringify(data),
     }),
