@@ -6,11 +6,16 @@ import type { NodeType } from '../../types/topology'
 const palette: { type: NodeType; label: string; icon: React.ReactNode; color: string; desc: string }[] = [
   { type: 'SERVICE',        label: 'Service',        icon: <Cpu size={16} />,      color: '#6366f1', desc: 'Microservice / API' },
   { type: 'DATABASE',       label: 'Database',       icon: <Database size={16} />, color: '#06b6d4', desc: 'SQL / NoSQL / Cache' },
-  { type: 'MESSAGE_QUEUE',  label: 'Queue',          icon: <Layers size={16} />,   color: '#f59e0b', desc: 'Kafka / RabbitMQ' },
+  { type: 'MESSAGE_QUEUE',  label: 'Queue',          icon: <Layers size={16} />,   color: '#f59e0b', desc: 'Standard MQ' },
   { type: 'LOAD_BALANCER',  label: 'Load Balancer',  icon: <GitMerge size={16} />, color: '#8b5cf6', desc: 'Round robin / LCF' },
   { type: 'API_GATEWAY',    label: 'API Gateway',    icon: <Zap size={16} />,      color: '#ec4899', desc: 'Entry point / Auth' },
   { type: 'CDN',            label: 'CDN',            icon: <Globe size={16} />,    color: '#10b981', desc: 'Edge cache layer' },
   { type: 'EXTERNAL_SERVICE', label: 'External API', icon: <Server size={16} />,  color: '#64748b', desc: 'Third-party service' },
+  { type: 'KAFKA',          label: 'Kafka Broker',   icon: <Layers size={16} />,   color: '#ef4444', desc: 'Apache Kafka Event Broker' },
+  { type: 'RABBITMQ',       label: 'RabbitMQ',       icon: <Layers size={16} />,   color: '#f97316', desc: 'RabbitMQ AMQP Broker' },
+  { type: 'ELASTICSEARCH',  label: 'Elasticsearch',  icon: <Database size={16} />, color: '#facc15', desc: 'Search & Analytics DB' },
+  { type: 'REDIS',          label: 'Redis Cache',    icon: <Database size={16} />, color: '#dc2626', desc: 'In-Memory Cache DB' },
+  { type: 'CDN_EDGE',       label: 'CDN Edge',       icon: <Globe size={16} />,    color: '#06b6d4', desc: 'Geographic Cache Edge' },
 ]
 
 export function NodePalette() {

@@ -6,6 +6,11 @@ export type NodeType =
   | 'API_GATEWAY'
   | 'CDN'
   | 'EXTERNAL_SERVICE'
+  | 'KAFKA'
+  | 'RABBITMQ'
+  | 'ELASTICSEARCH'
+  | 'REDIS'
+  | 'CDN_EDGE'
 
 export type EdgeType = 'HTTP' | 'GRPC' | 'MESSAGE' | 'DATABASE_CONN'
 
@@ -43,6 +48,7 @@ export interface NodeConfig {
   // EXTERNAL_SERVICE
   reliabilityPercent?: number
   externalLatencyMs?: number
+  layer?: 'FRONTEND' | 'API' | 'DATA'
 }
 
 export interface EdgeConfig {
@@ -91,5 +97,6 @@ export interface Scenario {
   walkthroughScript: unknown
   isBuiltIn: boolean
   playCount: number
+  upvotes?: number
   createdAt: string
 }

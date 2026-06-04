@@ -183,8 +183,25 @@ export const BaseNode = memo(({
             >
               {data.label}
             </div>
-            <div className="text-[10px]" style={{ color: '#3A4455' }}>
-              {typeLabel}
+            <div className="text-[10px] flex items-center gap-1.5" style={{ color: '#3A4455' }}>
+              <span>{typeLabel}</span>
+              {data.config.layer && (
+                <span className="px-1 rounded-[3px] text-[8px] font-bold" style={{
+                  background: data.config.layer === 'FRONTEND' ? 'rgba(99,102,241,0.12)'
+                            : data.config.layer === 'API' ? 'rgba(236,72,153,0.12)'
+                            : 'rgba(6,182,212,0.12)',
+                  color: data.config.layer === 'FRONTEND' ? '#6366F1'
+                       : data.config.layer === 'API' ? '#EC4899'
+                       : '#06B6D4',
+                  border: `1px solid ${
+                    data.config.layer === 'FRONTEND' ? 'rgba(99,102,241,0.2)'
+                    : data.config.layer === 'API' ? 'rgba(236,72,153,0.2)'
+                    : 'rgba(6,182,212,0.2)'
+                  }`,
+                }}>
+                  {data.config.layer}
+                </span>
+              )}
             </div>
           </div>
         </div>

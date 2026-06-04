@@ -45,6 +45,7 @@ model Scenario {
   walkthroughScript Json     // Pre-scripted narration with prediction checkpoints
   isBuiltIn         Boolean  @default(false)
   playCount         Int      @default(0)
+  upvotes           Int      @default(0)
   createdAt         DateTime @default(now())
 }
 

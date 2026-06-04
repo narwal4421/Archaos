@@ -167,6 +167,65 @@ export function SimControls() {
   const [scheduledType, setScheduledType] = useState<ChaosType>('KILL_NODE')
   const [scheduleTarget, setScheduleTarget] = useState('')
 
+  const [customScript, setCustomScript] = useState(
+`# Timed Failure Sequence YAML
+- time: 10
+  type: CPU_SPIKE
+  target: order-service
+- time: 20
+  type: KILL_NODE
+  target: user-service
+- time: 30
+  type: RECOVER_NODE
+  target: user-service`
+  )
+  const [scriptError, setScriptError] = useState<string | null>(null)
+  const [scriptSuccess, setScriptSuccess] = useState(false)
+
+  const handleRunScript = () => {
+    setScriptError(null)
+    setScriptSuccess(false)
+    try {
+      const items = customScript.split('- ')
+      const parsed: any[] = []
+      for (const item of items) {
+        if (!item.trim() || item.startsWith('#')) continue
+        const lines = item.split('\n')
+        const obj: any = {}
+        for (const line of lines) {
+          const parts = line.split(':')
+          if (parts.length >= 2) {
+            const key = parts[0].trim()
+            const val = parts.slice(1).join(':').trim()
+            if (key === 'time') obj.time = parseInt(val) || 0
+            if (key === 'type') obj.type = val as ChaosType
+            if (key === 'target') obj.target = val
+            if (key === 'value') obj.value = parseFloat(val) || 0
+          }
+        }
+        if (obj.time !== undefined && obj.type && obj.target) {
+          parsed.push(obj)
+        }
+      }
+
+      if (parsed.length === 0) {
+        throw new Error("No valid events found. Check your YAML formatting.")
+      }
+
+      parsed.forEach(evt => {
+        scheduleChaos(evt.time, {
+          type: evt.type,
+          targetId: evt.target,
+          value: evt.value,
+        })
+      })
+
+      setScriptSuccess(true)
+    } catch (e: any) {
+      setScriptError(e.message || "Failed to parse script.")
+    }
+  }
+
   const status = simState.status
   const isRunning = status === 'RUNNING'
   const isPaused = status === 'PAUSED'
@@ -497,10 +556,51 @@ export function SimControls() {
                   border: `1px solid ${!scheduleTarget ? '#141820' : '#F59E0B40'}`,
                   opacity: !scheduleTarget ? 0.4 : 1,
                   transition: 'all 0.15s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  marginBottom: 12,
                 }}
               >
                 <Clock size={10} /> Schedule Event
               </button>
+
+              {/* ─── CUSTOM CHAOS SCRIPT ─── */}
+              <div style={{ borderTop: '1px solid #141820', paddingTop: 10 }}>
+                <span style={{ fontSize: 9, color: '#4A5568', fontFamily: 'monospace', display: 'block', marginBottom: 6 }}>
+                  ⚡ CUSTOM CHAOS SCRIPT (YAML)
+                </span>
+                <textarea
+                  value={customScript}
+                  onChange={e => setCustomScript(e.target.value)}
+                  style={{
+                    width: '100%', height: 90, background: '#060810', border: '1px solid #1A2030',
+                    borderRadius: 6, padding: '6px 8px', fontSize: 9, fontFamily: 'monospace',
+                    color: '#A5B4FC', outline: 'none', resize: 'vertical', lineHeight: 1.4,
+                  }}
+                />
+                <button
+                  onClick={handleRunScript}
+                  style={{
+                    width: '100%', padding: '6px 0', borderRadius: 6, fontSize: 9, fontWeight: 700,
+                    cursor: 'pointer', background: 'rgba(99,102,241,0.1)', color: '#A5B4FC',
+                    border: '1px solid rgba(99,102,241,0.3)', transition: 'all 0.15s',
+                    marginTop: 6,
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.18)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(99,102,241,0.1)'}
+                >
+                  Inject Chaos Sequence
+                </button>
+
+                {scriptError && (
+                  <div style={{ color: '#EF4444', fontSize: 8, fontFamily: 'monospace', marginTop: 4 }}>
+                    ⚠️ {scriptError}
+                  </div>
+                )}
+                {scriptSuccess && (
+                  <div style={{ color: '#10B981', fontSize: 8, fontFamily: 'monospace', marginTop: 4 }}>
+                    ✓ Custom sequence loaded and scheduled!
+                  </div>
+                )}
+              </div>
             </div>
           </motion.div>
         )}

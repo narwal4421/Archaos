@@ -29,6 +29,11 @@ const typeToNodeType: Record<NodeType, string> = {
   API_GATEWAY:     'api_gateway',
   CDN:             'cdn',
   EXTERNAL_SERVICE:'external_service',
+  KAFKA:           'kafka',
+  RABBITMQ:        'rabbitmq',
+  ELASTICSEARCH:   'elasticsearch',
+  REDIS:           'redis',
+  CDN_EDGE:        'cdn_edge',
 }
 
 const TYPE_DEFAULTS: Record<NodeType, string> = {
@@ -39,6 +44,11 @@ const TYPE_DEFAULTS: Record<NodeType, string> = {
   API_GATEWAY:     'API Gateway',
   CDN:             'CDN',
   EXTERNAL_SERVICE:'External API',
+  KAFKA:           'Kafka Broker',
+  RABBITMQ:        'RabbitMQ Queue',
+  ELASTICSEARCH:   'Elasticsearch DB',
+  REDIS:           'Redis Cache',
+  CDN_EDGE:        'CDN Edge Server',
 }
 
 export function CanvasWrapper() {

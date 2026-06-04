@@ -4,7 +4,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Navbar } from '../components/layout/Navbar'
-import { ChevronRight, Zap, Terminal, BookOpen } from 'lucide-react'
+import { ChevronRight, Zap, Terminal, BookOpen, Heart } from 'lucide-react'
+import { api } from '../lib/api'
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
 const SCENARIOS = [
@@ -273,10 +274,10 @@ function BackgroundField() {
 }
 
 // ─── Scenario card ────────────────────────────────────────────────────────────
-function ScenarioCard({ s, idx, visible }: { s: typeof SCENARIOS[0]; idx: number; visible: boolean }) {
+function ScenarioCard({ s, idx, visible, onUpvote }: { s: any; idx: number; visible: boolean; onUpvote: (id: string) => void }) {
   const navigate = useNavigate()
   const [hovered, setHovered] = useState(false)
-  const diff = DIFFICULTY_META[s.difficulty]
+  const diff = DIFFICULTY_META[s.difficulty as 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED']
 
   return (
     <div
@@ -383,7 +384,7 @@ function ScenarioCard({ s, idx, visible }: { s: typeof SCENARIOS[0]; idx: number
 
         {/* Highlights */}
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
-          {s.highlights.map(h => (
+          {s.highlights.map((h: string) => (
             <span key={h} style={{
               fontFamily: "'JetBrains Mono',monospace", fontSize: 9,
               color: hovered ? s.color + 'CC' : '#3A4455',
@@ -400,6 +401,24 @@ function ScenarioCard({ s, idx, visible }: { s: typeof SCENARIOS[0]; idx: number
           display: 'flex', gap: 8,
           paddingTop: 10, borderTop: '1px solid #0D1018',
         }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onUpvote(s.id); }}
+            style={{
+              padding: '9px 12px',
+              background: '#0A0D12', border: '1px solid #1A2030',
+              borderRadius: 8, color: '#EF4444',
+              fontSize: 11, fontWeight: 600, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
+              fontFamily: "'DM Sans',sans-serif",
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#EF444440'; e.currentTarget.style.background = 'rgba(239,68,68,0.05)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A2030'; e.currentTarget.style.background = '#0A0D12' }}
+          >
+            <Heart size={11} fill={(s.upvotes ?? 0) > 0 ? '#EF4444' : 'none'} />
+            {(s.upvotes ?? 0)}
+          </button>
+
           <Link
             to={`/learn/${s.id}`}
             onClick={e => e.stopPropagation()}
@@ -500,11 +519,45 @@ export function Scenarios() {
   const [cardsVisible, setCardsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
+  const [scenarios, setScenarios] = useState<any[]>(SCENARIOS)
 
   useEffect(() => {
     setTimeout(() => setMounted(true), 50)
     setTimeout(() => setCardsVisible(true), 300)
+
+    async function loadScenarios() {
+      try {
+        const custom = await api.scenarios.list()
+        const mappedCustom = custom.map(c => ({
+          id: c.id,
+          name: c.name,
+          desc: c.description,
+          category: (c.category || 'RESILIENCE').toUpperCase() as any,
+          difficulty: (c.difficulty || 'BEGINNER').toUpperCase() as any,
+          color: c.category === 'CASCADE' ? '#EF4444' : c.category === 'RETRY_STORM' ? '#F59E0B' : '#6366F1',
+          highlights: ['Community', 'Visual Sim'],
+          nodes: 5,
+          edges: 4,
+          pattern: 'fan',
+          upvotes: c.upvotes || 0,
+        }))
+        const defaults = SCENARIOS.filter(s => !mappedCustom.some(mc => mc.id === s.id))
+        setScenarios([...defaults, ...mappedCustom])
+      } catch (e) {
+        console.error("Failed to load custom scenarios", e)
+      }
+    }
+    loadScenarios()
   }, [])
+
+  const handleUpvote = async (id: string) => {
+    try {
+      await api.scenarios.upvote(id)
+      setScenarios(prev => prev.map(s => s.id === id ? { ...s, upvotes: (s.upvotes || 0) + 1 } : s))
+    } catch (e) {
+      console.error("Failed to upvote", e)
+    }
+  }
 
   const handleFilterChange = useCallback((cat: typeof CATEGORIES[number]) => {
     setCardsVisible(false)
@@ -512,15 +565,15 @@ export function Scenarios() {
     setTimeout(() => setCardsVisible(true), 180)
   }, [])
 
-  const filtered = SCENARIOS.filter(s => {
+  const filtered = scenarios.filter(s => {
     const matchCat = filter === 'ALL' || s.category === filter
     const q = searchQuery.toLowerCase()
-    const matchSearch = !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.highlights.some(h => h.toLowerCase().includes(q))
+    const matchSearch = !q || s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.highlights.some((h: string) => h.toLowerCase().includes(q))
     return matchCat && matchSearch
   })
 
   const countFor = (cat: typeof CATEGORIES[number]) =>
-    cat === 'ALL' ? SCENARIOS.length : SCENARIOS.filter(s => s.category === cat).length
+    cat === 'ALL' ? scenarios.length : scenarios.filter(s => s.category === cat).length
 
   return (
     <div style={{
@@ -711,7 +764,7 @@ export function Scenarios() {
             gap: 20,
           }}>
             {filtered.map((s, i) => (
-              <ScenarioCard key={s.id} s={s} idx={i} visible={cardsVisible} />
+              <ScenarioCard key={s.id} s={s} idx={i} visible={cardsVisible} onUpvote={handleUpvote} />
             ))}
           </div>
         )}

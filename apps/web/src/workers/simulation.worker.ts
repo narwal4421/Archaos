@@ -185,7 +185,7 @@ class NodeSimState {
     }
 
     // ── Active connections (DATABASE nodes) ──────────────────
-    if (this.config.type === 'DATABASE') {
+    if (this.config.type === 'DATABASE' || this.config.type === 'ELASTICSEARCH' || this.config.type === 'REDIS') {
       const poolSize = this.config.connectionPoolSize ?? 20
       const usedFraction = Math.min(1, this.requestsPerSec / Math.max(1, capacity))
       this.activeConnections = Math.round(usedFraction * poolSize + (Math.random() - 0.5))
@@ -608,7 +608,7 @@ class SimulationEngine {
 
     // Async MESSAGE_QUEUE draining
     this.nodes.forEach((node) => {
-      if (node.config.type === 'MESSAGE_QUEUE') {
+      if (node.config.type === 'MESSAGE_QUEUE' || node.config.type === 'KAFKA' || node.config.type === 'RABBITMQ') {
         const downstreamIds = this.adjacency.get(node.id) ?? []
         for (const downstreamId of downstreamIds) {
           const consumer = this.nodes.get(downstreamId)
@@ -646,7 +646,7 @@ class SimulationEngine {
     }
 
     // ── CDN node — cache hit model ────────────────────────────
-    if (node.config.type === 'CDN') {
+    if (node.config.type === 'CDN' || node.config.type === 'CDN_EDGE') {
       const warmupThreshold = 200 // requests before cache is warm
       node.cacheWarmupRequests += rps * (this.tickIntervalMs / 1000)
       node.cacheWarmedUp = node.cacheWarmupRequests >= warmupThreshold
@@ -713,7 +713,7 @@ class SimulationEngine {
     }
 
     // ── MESSAGE_QUEUE node — accumulate ───────────────────────
-    if (node.config.type === 'MESSAGE_QUEUE') {
+    if (node.config.type === 'MESSAGE_QUEUE' || node.config.type === 'KAFKA' || node.config.type === 'RABBITMQ') {
       const maxQueue = node.config.maxQueueDepth ?? 1000
       const addedRequests = rps * (this.tickIntervalMs / 1000)
       const isFull = node.queueDepth >= maxQueue

@@ -34,6 +34,26 @@ export const ExternalServiceNode = memo((props: NodeProps<CustomNode>) => (
   <BaseNode {...props} icon={<Server size={14} />} accentColor="#64748b" typeLabel="External Service" />
 ))
 
+export const KafkaNode = memo((props: NodeProps<CustomNode>) => (
+  <BaseNode {...props} icon={<Layers size={14} />} accentColor="#ef4444" typeLabel="Kafka Broker" />
+))
+
+export const RabbitMqNode = memo((props: NodeProps<CustomNode>) => (
+  <BaseNode {...props} icon={<Layers size={14} />} accentColor="#f97316" typeLabel="RabbitMQ" />
+))
+
+export const ElasticsearchNode = memo((props: NodeProps<CustomNode>) => (
+  <BaseNode {...props} icon={<Database size={14} />} accentColor="#facc15" typeLabel="Elasticsearch" />
+))
+
+export const RedisNode = memo((props: NodeProps<CustomNode>) => (
+  <BaseNode {...props} icon={<Database size={14} />} accentColor="#dc2626" typeLabel="Redis Cache" />
+))
+
+export const CdnEdgeNode = memo((props: NodeProps<CustomNode>) => (
+  <BaseNode {...props} icon={<Globe size={14} />} accentColor="#10b981" typeLabel="CDN Edge" />
+))
+
 // eslint-disable-next-line react-refresh/only-export-components
 export const nodeTypes = {
   service:         ServiceNode,
@@ -43,4 +63,9 @@ export const nodeTypes = {
   api_gateway:     ApiGatewayNode,
   cdn:             CdnNode,
   external_service: ExternalServiceNode,
+  kafka:           KafkaNode,
+  rabbitmq:        RabbitMqNode,
+  elasticsearch:   ElasticsearchNode,
+  redis:           RedisNode,
+  cdn_edge:        CdnEdgeNode,
 }

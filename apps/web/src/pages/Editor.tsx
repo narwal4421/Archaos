@@ -18,10 +18,12 @@ import { EventTimeline } from '../components/simulation/EventTimeline'
 import { NodeConfigPanel } from '../components/canvas/NodeConfigPanel'
 import { EdgeConfigPanel } from '../components/canvas/EdgeConfigPanel'
 import { api } from '../lib/api'
+import { ImportDialog } from '../components/canvas/ImportDialog'
+import { autoLayoutTopology } from '../utils/infrastructureParser'
 import {
   ArrowLeft, Pencil, Save, Cpu, Database, Layers, GitMerge,
   Zap, Globe, Server, ChevronDown, Activity, Cpu as CpuIcon,
-  TerminalSquare, Clock,
+  TerminalSquare, Clock, Upload,
 } from 'lucide-react'
 import type { NodeConfig, EdgeConfig, NodeType } from '../types/topology'
 
@@ -154,17 +156,55 @@ const SCENARIO_BLUEPRINTS: Record<string, { nodes: NodeConfig[]; edges: EdgeConf
       { id: 'e5', type: 'DATABASE_CONN', sourceId: 'api-service', targetId: 'postgres-db' },
     ],
   },
+  'aws-3-tier': {
+    label: 'AWS 3-Tier App', color: '#FF9900', desc: 'One-click AWS web app setup with API Gateway, ALB, ECS, and RDS',
+    nodes: [
+      { id: 'api-gateway', type: 'API_GATEWAY', label: 'AWS API Gateway', x: 80, y: 250 },
+      { id: 'load-balancer', type: 'LOAD_BALANCER', label: 'AWS ALB', x: 260, y: 250 },
+      { id: 'auth-service', type: 'SERVICE', label: 'ECS Auth Service', x: 460, y: 120, replicas: 2 },
+      { id: 'order-service', type: 'SERVICE', label: 'ECS Order Service', x: 460, y: 380, replicas: 3 },
+      { id: 'redis-cache', type: 'REDIS', label: 'ElastiCache Redis', x: 680, y: 120 },
+      { id: 'rds-postgres', type: 'DATABASE', label: 'RDS PostgreSQL', x: 680, y: 380 },
+    ],
+    edges: [
+      { id: 'e1', type: 'HTTP', sourceId: 'api-gateway', targetId: 'load-balancer' },
+      { id: 'e2', type: 'HTTP', sourceId: 'load-balancer', targetId: 'auth-service' },
+      { id: 'e3', type: 'HTTP', sourceId: 'load-balancer', targetId: 'order-service' },
+      { id: 'e4', type: 'DATABASE_CONN', sourceId: 'auth-service', targetId: 'redis-cache' },
+      { id: 'e5', type: 'DATABASE_CONN', sourceId: 'order-service', targetId: 'rds-postgres' },
+    ],
+  },
+  'netflix-stack': {
+    label: 'Netflix Microservices', color: '#E50914', desc: 'Netflix architecture with Eureka, playback, and recommendation API',
+    nodes: [
+      { id: 'zuul-gateway', type: 'API_GATEWAY', label: 'Zuul Gateway', x: 80, y: 250 },
+      { id: 'playback-service', type: 'SERVICE', label: 'Playback Service', x: 300, y: 150, replicas: 4 },
+      { id: 'recommendation', type: 'SERVICE', label: 'Recommendation API', x: 300, y: 350, replicas: 2 },
+      { id: 'kafka-bus', type: 'KAFKA', label: 'Kafka Telemetry', x: 520, y: 250 },
+      { id: 'cassandra-db', type: 'DATABASE', label: 'Cassandra Storage', x: 740, y: 250 },
+    ],
+    edges: [
+      { id: 'e1', type: 'HTTP', sourceId: 'zuul-gateway', targetId: 'playback-service' },
+      { id: 'e2', type: 'HTTP', sourceId: 'zuul-gateway', targetId: 'recommendation' },
+      { id: 'e3', type: 'HTTP', sourceId: 'playback-service', targetId: 'kafka-bus' },
+      { id: 'e4', type: 'HTTP', sourceId: 'recommendation', targetId: 'cassandra-db' },
+    ],
+  },
 }
 
-// ─── Node palette config ──────────────────────────────────────────────────────
 const NODE_PALETTE: { type: NodeType; label: string; icon: React.ReactNode; color: string; desc: string }[] = [
   { type: 'API_GATEWAY', label: 'API Gateway', icon: <Zap size={14} />, color: '#EC4899', desc: 'Entry point' },
   { type: 'SERVICE', label: 'Service', icon: <Cpu size={14} />, color: '#7C3AED', desc: 'Microservice' },
   { type: 'DATABASE', label: 'Database', icon: <Database size={14} />, color: '#06B6D4', desc: 'SQL / NoSQL' },
-  { type: 'MESSAGE_QUEUE', label: 'Queue', icon: <Layers size={14} />, color: '#F59E0B', desc: 'Kafka / AMQP' },
+  { type: 'MESSAGE_QUEUE', label: 'Queue', icon: <Layers size={14} />, color: '#F59E0B', desc: 'Standard MQ' },
   { type: 'LOAD_BALANCER', label: 'Load Balancer', icon: <GitMerge size={14} />, color: '#10B981', desc: 'Traffic split' },
   { type: 'CDN', label: 'CDN', icon: <Globe size={14} />, color: '#3B82F6', desc: 'Edge cache' },
   { type: 'EXTERNAL_SERVICE', label: 'External API', icon: <Server size={14} />, color: '#888888', desc: 'Third-party' },
+  { type: 'KAFKA', label: 'Kafka', icon: <Layers size={14} />, color: '#ef4444', desc: 'Apache Kafka' },
+  { type: 'RABBITMQ', label: 'RabbitMQ', icon: <Layers size={14} />, color: '#f97316', desc: 'RabbitMQ Broker' },
+  { type: 'ELASTICSEARCH', label: 'Elasticsearch', icon: <Database size={14} />, color: '#facc15', desc: 'Search engine' },
+  { type: 'REDIS', label: 'Redis Cache', icon: <Database size={14} />, color: '#dc2626', desc: 'In-memory cache' },
+  { type: 'CDN_EDGE', label: 'CDN Edge', icon: <Globe size={14} />, color: '#06b6d4', desc: 'Cache edge' },
 ]
 
 // ─── Scenario picker dropdown ─────────────────────────────────────────────────
@@ -441,6 +481,29 @@ export function Editor() {
   const [activeScenario, setActiveScenario] = useState<string | null>(null)
   const [leftCollapsed, setLeftCollapsed] = useState(false)
   const [rightCollapsed, setRightCollapsed] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [topologyVersions, setTopologyVersions] = useState<{ id: string; name: string; timestamp: string; nodes: any[]; edges: any[] }[]>([])
+  const [selectedDiffIndex, setSelectedDiffIndex] = useState<number | null>(null)
+
+  const handleSaveVersion = () => {
+    const nodeConfigs = Object.values(canvasStore.nodeConfigs)
+    const edgeConfigs = Object.values(canvasStore.edgeConfigs)
+    const newVersion = {
+      id: Math.random().toString(36).substring(7),
+      name: `v${topologyVersions.length + 1} (${topologyName || 'Untitled'})`,
+      timestamp: new Date().toLocaleTimeString(),
+      nodes: nodeConfigs,
+      edges: edgeConfigs,
+    }
+    setTopologyVersions(prev => [...prev, newVersion])
+  }
+
+  const handleAutoLayout = () => {
+    const nodeConfigs = Object.values(canvasStore.nodeConfigs)
+    const edgeConfigs = Object.values(canvasStore.edgeConfigs)
+    const positioned = autoLayoutTopology(nodeConfigs, edgeConfigs)
+    loadTopology(positioned, edgeConfigs)
+  }
 
   const scenarioParam = searchParams.get('scenario')
   const topologyIdParam = searchParams.get('id')
@@ -637,6 +700,38 @@ export function Editor() {
         {/* Scenario picker */}
         <ScenarioPicker current={activeScenario} onSelect={handleScenarioSelect} />
 
+        <button
+          onClick={() => setShowImport(true)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 8,
+            background: '#090C12', border: '1px solid #141820',
+            color: '#E8EDF3', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            fontFamily: "'JetBrains Mono',monospace", transition: 'all 0.18s',
+            marginLeft: 6,
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#6366F1'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#141820'}
+        >
+          <Upload size={12} /> IMPORT INFRA
+        </button>
+
+        <button
+          onClick={handleAutoLayout}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px', borderRadius: 8,
+            background: '#090C12', border: '1px solid #141820',
+            color: '#E8EDF3', cursor: 'pointer', fontSize: 11, fontWeight: 600,
+            fontFamily: "'JetBrains Mono',monospace", transition: 'all 0.18s',
+            marginLeft: 6,
+          }}
+          onMouseEnter={e => e.currentTarget.style.borderColor = '#6366F1'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = '#141820'}
+        >
+          <GitMerge size={12} /> AUTO LAYOUT
+        </button>
+
         {/* Spacer */}
         <div style={{ flex: 1 }} />
 
@@ -734,6 +829,76 @@ export function Editor() {
               <div className="panel-section" style={{ borderRadius: 8, padding: 4 }}>
                 <PanelHeader icon={<Zap size={11} />} label="SIMULATION" accent="#EF4444" />
                 <SimControls />
+              </div>
+
+              {/* Version Control & Diff */}
+              <div className="panel-section" style={{ borderRadius: 8, padding: 4, borderTop: '1px solid #141820', paddingTop: 14 }}>
+                <PanelHeader icon={<GitMerge size={11} />} label="VERSION HISTORY" accent="#6366F1" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button
+                    onClick={handleSaveVersion}
+                    style={{
+                      width: '100%', padding: '6px 10px', borderRadius: 8,
+                      background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.2)',
+                      color: '#A5B4FC', fontSize: 10, fontWeight: 600,
+                      cursor: 'pointer', fontFamily: "'JetBrains Mono',monospace",
+                    }}
+                  >
+                    + SAVE CURRENT VERSION
+                  </button>
+
+                  {topologyVersions.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                      <span style={{ fontSize: 8, color: '#3A4455', fontFamily: "'JetBrains Mono',monospace" }}>COMPARE WITH:</span>
+                      <select
+                        value={selectedDiffIndex !== null ? selectedDiffIndex : ''}
+                        onChange={e => setSelectedDiffIndex(e.target.value === '' ? null : Number(e.target.value))}
+                        style={{
+                          width: '100%', padding: '5px 8px', borderRadius: 6,
+                          background: '#07090D', border: '1px solid #141820',
+                          color: '#C8D0DA', fontSize: 9, fontFamily: 'monospace',
+                          outline: 'none', cursor: 'pointer',
+                        }}
+                      >
+                        <option value="">None (Current)</option>
+                        {topologyVersions.map((v, i) => (
+                          <option key={v.id} value={i}>{v.name} ({v.timestamp})</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  {selectedDiffIndex !== null && topologyVersions[selectedDiffIndex] && (
+                    <div style={{
+                      background: '#07090D', border: '1px solid #141820', borderRadius: 8,
+                      padding: 8, fontSize: 9, fontFamily: 'monospace', display: 'flex', flexDirection: 'column', gap: 6,
+                    }}>
+                      <div style={{ color: '#6366F1', fontWeight: 'bold', borderBottom: '1px solid #141820', paddingBottom: 4 }}>
+                        DIFF: {topologyVersions[selectedDiffIndex].name}
+                      </div>
+                      {(() => {
+                        const currentNodes = Object.values(canvasStore.nodeConfigs)
+                        const diffVer = topologyVersions[selectedDiffIndex]
+                        const added = currentNodes.filter(n => !diffVer.nodes.some((dn: any) => dn.id === n.id))
+                        const removed = diffVer.nodes.filter((dn: any) => !currentNodes.some(n => n.id === dn.id))
+                        
+                        return (
+                          <>
+                            {added.length === 0 && removed.length === 0 && (
+                              <div style={{ color: '#8B95A3' }}>No structural changes detected.</div>
+                            )}
+                            {added.map(n => (
+                              <div key={n.id} style={{ color: '#10B981' }}>+ Added Node: {n.label}</div>
+                            ))}
+                            {removed.map(n => (
+                              <div key={n.id} style={{ color: '#EF4444' }}>- Removed Node: {n.label}</div>
+                            ))}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                </div>
               </div>
 
             </div>
@@ -864,6 +1029,9 @@ export function Editor() {
 
       {/* ── STATUS BAR ── */}
       <StatusBar scenario={activeScenario} topologyId={topologyIdParam} />
+
+      {/* ── IMPORT DIALOG ── */}
+      {showImport && <ImportDialog onClose={() => setShowImport(false)} />}
     </div>
   )
 }

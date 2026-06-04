@@ -59,6 +59,13 @@ export const api = {
   scenarios: {
     list: () => request<Scenario[]>('/scenarios'),
     get: (id: string) => request<Scenario>(`/scenarios/${id}`),
+    create: (data: any) => request<Scenario>('/scenarios', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+    upvote: (id: string) => request<Scenario>(`/scenarios/${id}/upvote`, {
+      method: 'POST',
+    }),
   },
   sessions: {
     create: (data: { topologyId?: string; scenarioId?: string }) =>

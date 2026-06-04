@@ -1,5 +1,6 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Post, Body } from '@nestjs/common';
 import { AppService } from './app.service';
+import { runHeadlessSim } from './modules/sessions/headless-runner';
 
 @Controller()
 export class AppController {
@@ -18,5 +19,23 @@ export class AppController {
       timestamp: new Date().toISOString(),
       uptime: Math.floor(process.uptime()),
     };
+  }
+
+  @Post('run-headless')
+  runHeadless(
+    @Body()
+    body: {
+      nodes: any[];
+      edges: any[];
+      chaosScript: any[];
+      durationSecs?: number;
+    },
+  ) {
+    return runHeadlessSim(
+      body.nodes || [],
+      body.edges || [],
+      body.chaosScript || [],
+      body.durationSecs || 30,
+    );
   }
 }

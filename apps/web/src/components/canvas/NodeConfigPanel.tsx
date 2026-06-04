@@ -56,6 +56,20 @@ export function NodeConfigPanel() {
               />
             </div>
 
+            <div>
+              <label className="text-xs text-slate-400 block mb-1">Logical Layer</label>
+              <select
+                value={config.layer ?? ''}
+                onChange={(e) => handleUpdate('layer', e.target.value || undefined)}
+                className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none text-slate-100"
+              >
+                <option value="">None</option>
+                <option value="FRONTEND">Frontend Layer</option>
+                <option value="API">API Layer</option>
+                <option value="DATA">Data Layer</option>
+              </select>
+            </div>
+
             {config.type === 'SERVICE' && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -102,7 +116,7 @@ export function NodeConfigPanel() {
               </>
             )}
 
-            {config.type === 'DATABASE' && (
+            {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -133,7 +147,7 @@ export function NodeConfigPanel() {
               </>
             )}
 
-            {config.type === 'MESSAGE_QUEUE' && (
+            {(config.type === 'MESSAGE_QUEUE' || config.type === 'KAFKA' || config.type === 'RABBITMQ') && (
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -230,7 +244,7 @@ export function NodeConfigPanel() {
               </>
             )}
 
-            {config.type === 'DATABASE' && (
+            {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
               <>
                 <button
                   onClick={() => chaos.exhaustConnections(config.id)}
