@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Editor } from './pages/Editor'
 import { Scenarios } from './pages/Scenarios'
 import { Learn } from './pages/Learn'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,18 +19,20 @@ const queryClient = new QueryClient({
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Landing />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/editor" element={<Editor />} />
-          <Route path="/scenarios" element={<Scenarios />} />
-          <Route path="/learn/:scenarioId" element={<Learn />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<ErrorBoundary><Landing /></ErrorBoundary>} />
+            <Route path="/auth" element={<ErrorBoundary><Auth /></ErrorBoundary>} />
+            <Route path="/dashboard" element={<ErrorBoundary><Dashboard /></ErrorBoundary>} />
+            <Route path="/editor" element={<ErrorBoundary><Editor /></ErrorBoundary>} />
+            <Route path="/scenarios" element={<ErrorBoundary><Scenarios /></ErrorBoundary>} />
+            <Route path="/learn/:scenarioId" element={<ErrorBoundary><Learn /></ErrorBoundary>} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   )
 }
 

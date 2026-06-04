@@ -13,6 +13,29 @@ const CONCEPT_COLORS: Record<string, string> = {
   'Chaos Engineering':     '#3B82F6',
 }
 
+/** Maps known concept names to their Wikipedia article slugs. */
+const CONCEPT_WIKI_SLUGS: Record<string, string> = {
+  'Cascading Failure':       'Cascading_failure',
+  'Circuit Breaker Pattern': 'Circuit_breaker_design_pattern',
+  'Retry Storm':             'Thundering_herd_problem',
+  'Thundering Herd':         'Thundering_herd_problem',
+  'Split Brain':             'Split-brain_(computing)',
+  'Backpressure':            'Back_pressure',
+  'Connection Exhaustion':   'Cascading_failure',
+  'Cache Stampede':          'Cache_stampede',
+  'Chaos Engineering':       'Chaos_engineering',
+  'Eventual Consistency':    'Eventual_consistency',
+  'Distributed Systems Resilience': 'Fault_tolerance',
+}
+
+function getWikiLink(concept?: string): string {
+  if (!concept) return 'https://en.wikipedia.org/wiki/Distributed_computing'
+  const slug = CONCEPT_WIKI_SLUGS[concept]
+  return slug
+    ? `https://en.wikipedia.org/wiki/${slug}`
+    : `https://en.wikipedia.org/w/index.php?search=${encodeURIComponent(concept)}`
+}
+
 export function NarrationPanel() {
   const { isStreaming, streamBuffer, currentEntry, modelUsed } = useNarrationStore()
 
@@ -137,7 +160,7 @@ export function NarrationPanel() {
       {displayText && (
         <div className="pt-3 border-t border-[#1A1A1A] text-right">
           <a
-            href="https://en.wikipedia.org/wiki/Cascading_failure"
+            href={getWikiLink(currentEntry?.concept)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-[11px] text-[#06B6D4] hover:underline cursor-pointer"

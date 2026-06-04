@@ -7,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
+import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import OpenAI from 'openai';
 import type {
@@ -16,6 +17,11 @@ import type {
 import type { Stream } from 'openai/streaming';
 
 const FIRST_TOKEN_TIMEOUT_MS = 5000;
+
+/** Per-client sliding-window rate limiter: max N events per window (ms). */
+interface RateLimitEntry {
+  timestamps: number[];
+}
 
 interface NarrationEvent {
   type?: string;
@@ -49,6 +55,13 @@ export class NarrationGateway
   @WebSocketServer()
   server: Server;
 
+  private readonly logger = new Logger(NarrationGateway.name);
+
+  // Rate limiting: max 5 narration events per 30-second window per client
+  private readonly rateLimitWindowMs = 30_000;
+  private readonly rateLimitMaxEvents = 5;
+  private rateLimitMap = new Map<string, RateLimitEntry>();
+
   private getProviderInfo() {
     if (process.env.OPENROUTER_API_KEY) {
       return { key: process.env.OPENROUTER_API_KEY, isOpenRouter: true };
@@ -61,7 +74,7 @@ export class NarrationGateway
 
   private getOpenAIClient(): OpenAI | null {
     const provider = this.getProviderInfo();
-    console.log('API key present:', !!provider);
+    this.logger.debug(`AI provider configured: ${provider ? (provider.isOpenRouter ? 'OpenRouter' : 'OpenAI') : 'none (demo mode)'}`);
     if (!provider) return null;
     return new OpenAI({
       apiKey: provider.key,
@@ -71,16 +84,33 @@ export class NarrationGateway
     });
   }
 
-  private lastNarrationTime = new Map<string, number>();
-  private readonly narrationCooldownMs = 5000;
+  /** Returns true if the client is within rate limit, false if throttled. */
+  private checkRateLimit(clientId: string): boolean {
+    const now = Date.now();
+    const entry = this.rateLimitMap.get(clientId) ?? { timestamps: [] };
+
+    // Purge timestamps outside the window
+    entry.timestamps = entry.timestamps.filter(
+      (t) => now - t < this.rateLimitWindowMs,
+    );
+
+    if (entry.timestamps.length >= this.rateLimitMaxEvents) {
+      this.logger.warn(`Client ${clientId} exceeded narration rate limit (${this.rateLimitMaxEvents} req/${this.rateLimitWindowMs / 1000}s)`);
+      return false;
+    }
+
+    entry.timestamps.push(now);
+    this.rateLimitMap.set(clientId, entry);
+    return true;
+  }
 
   handleConnection(client: Socket): void {
-    console.log(`Narration client connected: ${client.id}`);
+    this.logger.log(`Narration client connected: ${client.id}`);
   }
 
   handleDisconnect(client: Socket): void {
-    console.log(`Narration client disconnected: ${client.id}`);
-    this.lastNarrationTime.delete(client.id);
+    this.logger.log(`Narration client disconnected: ${client.id}`);
+    this.rateLimitMap.delete(client.id);
   }
 
   @SubscribeMessage('narration:subscribe')
@@ -98,17 +128,18 @@ export class NarrationGateway
     data: { event: NarrationEvent; state: unknown; topology: unknown },
     @ConnectedSocket() client: Socket,
   ): Promise<void> {
-    const now = Date.now();
-    const lastTime = this.lastNarrationTime.get(client.id) ?? 0;
-    if (now - lastTime < this.narrationCooldownMs) {
+    if (!this.checkRateLimit(client.id)) {
+      client.emit('narration:error', {
+        message: 'Too many narration requests. Please wait a moment.',
+        code: 'RATE_LIMITED',
+      });
       return;
     }
-    this.lastNarrationTime.set(client.id, now);
 
     try {
       await this.streamNarration(client, data.event, data.state, data.topology);
     } catch (err) {
-      console.error('Narration error:', err);
+      this.logger.error('Narration stream error', err instanceof Error ? err.stack : String(err));
       client.emit('narration:error', {
         message: 'Failed to generate narration',
       });
@@ -123,6 +154,7 @@ export class NarrationGateway
   ): Promise<void> {
     const openaiClient = this.getOpenAIClient();
     if (!openaiClient) {
+      this.logger.warn('No AI API key configured — serving demo narration');
       const demo = this.generateDemoNarration(event);
       client.emit('narration:token', { token: JSON.stringify(demo) });
       client.emit('narration:done', {
@@ -166,6 +198,9 @@ Never be generic. Every word should describe THIS specific topology's current st
       { role: 'user', content: userMessage },
     ];
 
+    const siteReferer =
+      process.env.SITE_REFERER ?? 'https://archaos.vercel.app';
+
     const attemptStream = async (
       model: string,
     ): Promise<Stream<ChatCompletionChunk>> => {
@@ -178,7 +213,7 @@ Never be generic. Every word should describe THIS specific topology's current st
         },
         {
           headers: {
-            'HTTP-Referer': 'https://archaos.dev',
+            'HTTP-Referer': siteReferer,
             'X-Title': 'Archaos',
           },
         },
@@ -201,8 +236,8 @@ Never be generic. Every word should describe THIS specific topology's current st
       modelUsed = DYNAMIC_MODELS.primary;
     } catch (initErr: unknown) {
       const status = (initErr as { status?: number }).status;
-      console.warn(
-        `Primary model failed: ${status?.toString() ?? 'unknown'} — switching to fallback`,
+      this.logger.warn(
+        `Primary model ${DYNAMIC_MODELS.primary} failed (${status?.toString() ?? 'unknown'}) — switching to fallback`,
       );
       stream = await attemptStream(DYNAMIC_MODELS.fallback);
       modelUsed = DYNAMIC_MODELS.fallback;
@@ -212,7 +247,7 @@ Never be generic. Every word should describe THIS specific topology's current st
 
     const firstTokenTimer = setTimeout(() => {
       if (!firstTokenReceived && modelUsed === DYNAMIC_MODELS.primary) {
-        console.warn('Primary model too slow — switching to fallback');
+        this.logger.warn(`Primary model too slow (>${FIRST_TOKEN_TIMEOUT_MS}ms) — switching to fallback`);
         void attemptStream(DYNAMIC_MODELS.fallback)
           .then((fb) => {
             fallbackStream = fb;
@@ -220,7 +255,7 @@ Never be generic. Every word should describe THIS specific topology's current st
             client.emit('narration:model', { model: modelUsed });
           })
           .catch((fallbackErr: unknown) => {
-            console.error('Fallback model also failed:', fallbackErr);
+            this.logger.error('Fallback model also failed', String(fallbackErr));
             client.emit('narration:error', {
               message: 'Both models unavailable. Try again in a moment.',
             });
@@ -243,7 +278,7 @@ Never be generic. Every word should describe THIS specific topology's current st
       }
     } catch {
       if (modelUsed === DYNAMIC_MODELS.primary && !fallbackStream) {
-        console.warn('Primary stream died mid-way — switching to fallback');
+        this.logger.warn('Primary stream died mid-way — switching to fallback');
         clearTimeout(firstTokenTimer);
         try {
           const recovery = await attemptStream(DYNAMIC_MODELS.fallback);
