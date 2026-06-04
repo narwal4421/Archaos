@@ -64,11 +64,21 @@ export class NarrationGateway
 
   private getProviderInfo() {
     const orKey = process.env.OPENROUTER_API_KEY;
-    if (orKey && orKey.trim() !== '' && orKey !== 'your_openrouter_key_here' && !orKey.startsWith('sk-or-...')) {
+    if (
+      orKey &&
+      orKey.trim() !== '' &&
+      orKey !== 'your_openrouter_key_here' &&
+      !orKey.startsWith('sk-or-...')
+    ) {
       return { key: orKey, isOpenRouter: true };
     }
     const oaKey = process.env.OPENAI_API_KEY;
-    if (oaKey && oaKey.trim() !== '' && oaKey !== 'your_openai_key_here' && !oaKey.startsWith('sk-...')) {
+    if (
+      oaKey &&
+      oaKey.trim() !== '' &&
+      oaKey !== 'your_openai_key_here' &&
+      !oaKey.startsWith('sk-...')
+    ) {
       return { key: oaKey, isOpenRouter: false };
     }
     return null;
