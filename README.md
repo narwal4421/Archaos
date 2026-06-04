@@ -1,264 +1,721 @@
 <div align="center">
-  <br />
-  <h1>🌌 ARCHAOS</h1>
-  <p>
-    <b>The Cinematic Distributed Systems War Room & Chaos Simulator</b>
-  </p>
-  <p>
-    Stop reading about cascading failures. <b>Watch them happen.</b>
-  </p>
-  <br />
 
-  <p align="center">
-    <a href="https://nodejs.org/"><img src="https://img.shields.io/badge/Node.js-20.0+-blue?style=for-the-badge&logo=node.js&logoColor=white" alt="Node.js" /></a>
-    <a href="https://nestjs.com/"><img src="https://img.shields.io/badge/NestJS-11.0-E0234E?style=for-the-badge&logo=nestjs&logoColor=white" alt="NestJS" /></a>
-    <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" /></a>
-    <a href="https://tailwindcss.com/"><img src="https://img.shields.io/badge/TailwindCSS-4.0-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="TailwindCSS" /></a>
-    <a href="https://www.prisma.io/"><img src="https://img.shields.io/badge/Prisma-6.0-2D3748?style=for-the-badge&logo=prisma&logoColor=white" alt="Prisma" /></a>
-    <a href="https://socket.io/"><img src="https://img.shields.io/badge/Socket.io-4.0-010101?style=for-the-badge&logo=socket.io&logoColor=white" alt="Socket.io" /></a>
-  </p>
-  
-  <p align="center">
-    <a href="#-what-is-archaos"><strong>Explore the Docs</strong></a> ·
-    <a href="#-quick-start-guide"><strong>Quick Start</strong></a> ·
-    <a href="#-the-simulation-engine-deep-dive"><strong>Deep Dive</strong></a>
-  </p>
+# ⚡ ARCHAOS
+
+### *Distributed Systems Chaos Engineering Simulator*
+
+**The only chaos engineering platform where you build, break, and understand distributed systems — visually.**
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?style=for-the-badge&logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://docs.docker.com/compose/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](./LICENSE)
+
+<br/>
+
+> **Archaos** is a full-stack, browser-based chaos engineering workbench.  
+> Drag nodes onto a canvas, wire them together, inject CPU spikes, network partitions,  
+> memory leaks, and cascading failures — then watch the simulation tick in real-time  
+> inside a Web Worker while live telemetry streams to every metric panel.  
+> **No cloud bill. No agents. No YAML sprawl. Just understanding.**
+
+<br/>
+
+[🚀 Live Demo](https://archaos.vercel.app) · [📖 Docs](https://archaos.vercel.app/learn) · [🐛 Report Bug](https://github.com/narwal4421/Archaos/issues) · [✨ Request Feature](https://github.com/narwal4421/Archaos/issues)
+
 </div>
 
-<hr />
+---
 
-## 🚨 What is Archaos?
+## 📸 What Makes Archaos Different
 
-**Archaos** is a high-fidelity, interactive distributed systems playground. Built for engineers, architects, and students, it replaces static diagrams and dry architectural documents with a **live, visual simulation engine**.
-
-Design your architecture, set queue depths, configure circuit breakers, and then **inject chaos**. Watch as a single database latency spike triggers thread-pool exhaustion, initiates a retry storm, and ultimately takes down your API gateway—all visualized in real-time with a premium, dark-mode cinematic interface.
-
-To top it off, an **AI Incident Narrator** (powered by OpenAI/OpenRouter) watches the carnage alongside you, streaming causal explanations and predicting what will break next.
-
-### 🌟 Why This Repo Deserves a Star
-* **100% Client-Side Simulation**: No heavy Kubernetes clusters required. Millions of virtual requests are routed in real-time inside a dedicated HTML5 Web Worker.
-* **Multiplayer Incident Response**: Invite your team into a live `socket.io` room. One person injects a network partition, the other scrambles to scale up replicas.
-* **Math-Backed Physics**: This isn't an animation. It's a Discrete Event Simulator (DES) modeling actual queueing theory, backpressure, and sliding-window error rates.
+| Capability | Archaos | Chaos Monkey | Gremlin | Litmus |
+|---|:---:|:---:|:---:|:---:|
+| Browser-based — zero install | ✅ | ❌ | ❌ | ❌ |
+| Visual drag-and-drop topology builder | ✅ | ❌ | ❌ | ❌ |
+| Real-time simulation engine (Web Worker) | ✅ | ❌ | ❌ | ❌ |
+| Import Docker Compose / K8s / Terraform | ✅ | ❌ | ❌ | ⚠️ |
+| Custom YAML chaos scripting timeline | ✅ | ❌ | ✅ | ✅ |
+| AI narration & prediction checkpoints | ✅ | ❌ | ❌ | ❌ |
+| Blast radius analysis (upstream graph walk) | ✅ | ❌ | ❌ | ⚠️ |
+| Community scenario marketplace + upvoting | ✅ | ❌ | ❌ | ❌ |
+| Headless REST API + CLI for CI pipelines | ✅ | ❌ | ✅ | ✅ |
+| Circuit-breaker & retry simulation | ✅ | ❌ | ✅ | ⚠️ |
+| Version diff (topology checkpoints) | ✅ | ❌ | ❌ | ❌ |
+| Free & open-source | ✅ | ✅ | ❌ | ✅ |
 
 ---
 
-## ⚡ Core Capabilities
+## ✨ Feature Highlights
 
-<table>
-  <tr>
-    <td width="50%">
-      <h3>🏗️ Interactive Topology Builder</h3>
-      Drag and drop API Gateways, Microservices, Caches, and Databases. Connect them with HTTP or TCP edges. Configure max retries, connection pools, and circuit breaker thresholds down to the millisecond.
-    </td>
-    <td width="50%">
-      <h3>🌪️ Chaos Engineering Engine</h3>
-      Inject CPU spikes, database latency, cache expirations, and network partitions. Watch the blast radius propagate visually as nodes degrade from healthy to critical.
-    </td>
-  </tr>
-  <tr>
-    <td width="50%">
-      <h3>🤖 Live AI Narration</h3>
-      An LLM agent monitors your simulation state via WebSockets. When a node fails, it streams a causal analysis, identifies the underlying distributed systems concept (e.g., <i>"Thundering Herd"</i>), and predicts the next failure.
-    </td>
-    <td width="50%">
-      <h3>🎓 Interactive Scenarios</h3>
-      Learn by doing. Play through built-in challenges like <i>The Cascade</i>, <i>The Retry Storm</i>, and <i>Split Brain</i>. Answer interactive questions as the disaster unfolds.
-    </td>
-  </tr>
-</table>
+- 🎨 **Visual Canvas Editor** — Drag, wire, and configure any distributed system topology
+- ⚡ **Real-Time Simulation Engine** — Off-thread Web Worker runs a discrete-event priority queue at 250ms ticks
+- 💥 **Chaos Injection** — Kill nodes, spike CPU/memory, partition networks, add latency, trigger retry storms
+- 🔁 **Circuit Breaker Simulation** — Toggle per-edge, watch the state machine transition CLOSED → OPEN → HALF-OPEN
+- 📜 **Custom YAML Chaos Scripts** — Write multi-step failure sequences on a timeline; execute them with one click
+- 🏗️ **Infrastructure Import** — Paste `docker-compose.yml`, Kubernetes manifests, or Terraform HCL → auto-generate topology with dagre-style auto-layout
+- 🧠 **AI Narration** — GPT-powered real-time commentary explains what's happening and why (OpenAI / OpenRouter)
+- 🎯 **Blast Radius Analysis** — Walk the upstream dependency graph and highlight the full failure blast zone
+- 🌐 **Scenario Marketplace** — 8 built-in war-game scenarios + community-contributed blueprints with upvoting
+- 🔗 **Share Topology** — Publish and share scenarios with the community
+- 📊 **Live Telemetry** — p99 latency, RPS, error rate, CPU%, memory%, queue depth — all live on canvas
+- 🗂️ **Version History & Diff** — Save topology checkpoints (v1/v2/v3), see a visual diff of what changed
+- 🖥️ **Headless API + CLI** — `POST /run-headless` + `bin/cli.js` for CI pipeline integration
+- ☁️ **Cloud Blueprint Templates** — AWS 3-Tier, Netflix Microservices, Uber Dispatch Stack — load in one click
+- 📚 **Learn Center** — Interactive lessons on CAP theorem, retry storms, thundering herd, memory leaks
+- 🌙 **Dark-first premium UI** — Custom cursor, glitch effects, animated mesh grids, glassmorphism panels
 
 ---
 
-## 🧠 The Simulation Engine (Deep Dive)
+## 🏗️ Architecture Overview
 
-The heart of Archaos is a **Discrete Event Simulator (DES)** running completely isolated in a Web Worker (`simulation.worker.ts`). This ensures the React UI stays at a buttery-smooth 60fps even when simulating 10,000+ RPS.
-
-### The Physics of Failure
-Archaos doesn't just "turn nodes red." It calculates failure based on real distributed systems mathematics:
-
-#### 1. Queue Backpressure
-Each service maintains a finite request queue. When incoming requests exceed the processing capacity (determined by CPU limits and healthy replicas), the queue fills up. 
-Once `queueDepth >= maxQueueDepth`, the service sheds load (HTTP 503). Upstream services waiting on this node will exhaust their own connection pools, propagating the latency upward.
-
-#### 2. Sliding-Window Circuit Breakers
-Edges can be configured with circuit breakers. The engine maintains a rolling timestamp ring-buffer.
-
-$$ \text{Error Rate (10s)} = \left( \frac{\sum \text{Failed Requests}}{\sum \text{Total Requests}} \right) \times 100 $$
-
-If the error rate crosses the `errorThresholdPercent`, the circuit **OPENS**, immediately failing fast to protect the downstream service. After `halfOpenAfterSecs`, it allows probe requests to test recovery.
-
-#### 3. Memory Leaks & OOM Kills
-Memory utilization is modeled to drift naturally based on CPU churn. However, if a "Memory Leak" chaos event is injected, memory accumulates linearly until `memoryPercent >= 100%`, at which point the replica suffers an Out-Of-Memory (OOM) kill, halving the node's throughput capacity.
-
-### Engine Architecture
-```mermaid
-graph TD
-    subgraph Browser Main Thread
-        UI[React 19 / XYFlow Canvas]
-        Metrics[Zustand Store / Sparklines]
-    end
-
-    subgraph HTML5 Web Worker (Isolated)
-        Loop[Discrete Event Loop]
-        PQ[Priority Queue - Heap Sorted]
-        Nodes[(Service Node States)]
-        Edges[(Edge Runtime States)]
-        
-        Loop -->|Pop Next Event| PQ
-        PQ -->|Route Request| Nodes
-        Nodes -->|Forward| Edges
-        Edges -->|Backpressure| Nodes
-    end
-
-    UI -- "Inject Chaos / Edit Config" --> Loop
-    Loop -- "60Hz State Sync (60fps)" --> Metrics
+```
+archaos/                          ← Monorepo root (npm workspaces)
+│
+├── apps/
+│   ├── web/                      ← React + Vite frontend (SPA)
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   │   ├── canvas/       ← Canvas node/edge rendering, modals, toolbars
+│   │   │   │   │   ├── ChaosScriptEditor.tsx   ← YAML timeline chaos editor
+│   │   │   │   │   ├── ShareScenarioModal.tsx  ← Community publish & share
+│   │   │   │   │   └── ...
+│   │   │   │   └── layout/       ← Navbar, shared chrome
+│   │   │   ├── hooks/            ← useSimulation, useCanvas, useAuth
+│   │   │   ├── lib/
+│   │   │   │   ├── api.ts        ← Typed API client (fetch wrapper)
+│   │   │   │   └── infrastructureParser.ts   ← Docker/K8s/Terraform → topology
+│   │   │   ├── pages/
+│   │   │   │   ├── Landing.tsx   ← Animated marketing homepage
+│   │   │   │   ├── Auth.tsx      ← Sign in / Sign up
+│   │   │   │   ├── Dashboard.tsx ← Session history, saved topologies
+│   │   │   │   ├── Editor.tsx    ← Main chaos engineering workbench
+│   │   │   │   ├── Scenarios.tsx ← Community scenario marketplace
+│   │   │   │   └── Learn.tsx     ← Interactive education center
+│   │   │   ├── stores/           ← Zustand stores (auth, simulation)
+│   │   │   ├── types/            ← topology.ts, simulation.ts shared types
+│   │   │   └── workers/
+│   │   │       └── simulation.worker.ts  ← Off-thread discrete-event engine
+│   │   └── public/
+│   │       └── sitemap.xml
+│   │
+│   └── api/                      ← NestJS backend REST API
+│       ├── src/
+│       │   ├── modules/
+│       │   │   ├── auth/         ← JWT auth, bcrypt, passport strategy
+│       │   │   ├── topologies/   ← CRUD for saved topology graphs
+│       │   │   ├── scenarios/    ← Scenario catalog + upvoting
+│       │   │   ├── sessions/     ← Simulation session records
+│       │   │   ├── blast/        ← Blast radius graph-walk analysis
+│       │   │   └── narration/    ← AI commentary via OpenAI/OpenRouter
+│       │   └── prisma/           ← PrismaService + seed script
+│       └── prisma/
+│           └── schema.prisma     ← PostgreSQL schema (4 models)
+│
+├── bin/
+│   └── cli.js                    ← Headless simulation CLI
+│
+├── docker-compose.yml            ← Local Postgres 16 + Redis 7
+├── .env.example                  ← All env vars documented
+├── railway.toml                  ← One-click Railway deployment
+└── vercel.json                   ← SPA routing rewrite rules
 ```
 
 ---
 
-## 🏗️ System Architecture
+## 🧠 The Simulation Engine — Technical Deep Dive
 
-Archaos is a modern **TypeScript Monorepo**, utilizing Vite for the frontend and NestJS for the robust backend.
+The heart of Archaos is a **discrete-event simulation engine** running inside a **Web Worker** — completely off the UI thread, so the canvas never stutters regardless of topology size.
 
-### Tech Stack Matrix
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          ARCHAOS SIMULATION ENGINE                          │
+│                                                                             │
+│  UI Thread                        Web Worker Thread                         │
+│  ─────────────────                ──────────────────────────────────────    │
+│  Editor.tsx                       simulation.worker.ts                      │
+│  ┌────────────┐  postMessage()   ┌──────────────────────────────────────┐  │
+│  │ Canvas     │ ──────────────►  │ PriorityQueue<SimEvent>              │  │
+│  │ Controls   │                  │   min-heap keyed by .time (ms)       │  │
+│  │            │  postMessage()   │                                      │  │
+│  │ Telemetry  │ ◄────────────── │ tick() @ 250ms                       │  │
+│  │ Panels     │   SimSnapshot   │   ├─ Drain events up to now          │  │
+│  └────────────┘                  │   ├─ NodeStateMachine.step()        │  │
+│                                  │   │   ├─ CPU / memory model         │  │
+│  Zustand Store                   │   │   ├─ Replica saturation         │  │
+│  simulationStore                 │   │   ├─ OOM / restart cycle        │  │
+│  (snapshot atom)                 │   │   ├─ Queue depth / backpressure │  │
+│                                  │   │   └─ Health: HEALTHY→DEGRADED   │  │
+│                                  │   │             →FAILING→DEAD       │  │
+│                                  │   └─ EdgeStateMachine.step()        │  │
+│                                  │       ├─ Latency propagation        │  │
+│                                  │       ├─ Circuit breaker FSM        │  │
+│                                  │       │   CLOSED→OPEN→HALF_OPEN     │  │
+│                                  │       └─ Packet loss / partition    │  │
+│                                  └──────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-| Layer | Technologies Used | Purpose & Implementation |
-| :--- | :--- | :--- |
-| **Frontend UI** | React 19, Tailwind CSS 4.0, Framer Motion | High-performance, cinematic user interface with fluid micro-interactions. |
-| **Canvas / Graph**| `@xyflow/react`, `d3-shape` | Drag-and-drop topology rendering and bezier curve math for animated request paths. |
-| **State Mgt** | `zustand` | Global state management across the canvas, simulation, and auth contexts. |
-| **Backend API** | NestJS 11, TypeScript | Modular, scalable REST API and WebSocket gateway architecture. |
-| **Database** | PostgreSQL, Prisma 6 | Relational storage for topologies, user accounts, and historical scenarios. |
-| **Real-Time** | `socket.io`, `ioredis` | Syncing multiplayer simulation rooms and caching WebSocket client states. |
-| **AI Integration**| OpenAI SDK, OpenRouter | Streaming HTTP integration for the live AI Incident Narrator (`gpt-oss-120b`). |
+### Key Engine Behaviours
+
+| Mechanism | How It Works |
+|---|---|
+| **Priority Queue** | Min-heap on event `.time`; O(log n) push/pop ensures correct event ordering |
+| **Node State Machine** | `HEALTHY → DEGRADED → FAILING → DEAD → RECOVERING → HEALTHY` driven by error-rate thresholds |
+| **CPU/Memory Model** | RPS → CPU% via `(rps / maxRps) × cpuLimit`; memory leaks grow by `+1.2%/tick` until OOM restart |
+| **Circuit Breaker** | Per-edge: tracks error window; trips to OPEN after threshold; attempts HALF-OPEN after cooldown |
+| **Cascading Failures** | Upstream nodes inherit elevated error rates from degraded downstream dependencies |
+| **CDN Warmup** | CDN_EDGE nodes start cold (0% cache), warm over 10 ticks, then serve cache-hit savings |
+| **Retry Storm** | `maxRetries × retryDelayMs` amplifies load on a struggling downstream; visible as RPS spike |
+| **Custom Chaos Script** | YAML events are parsed into `{ atSec, type, targetId, value }` structs and pushed to priority queue |
 
 ---
 
-## 🚀 Quick Start Guide
+## 🔐 Security Architecture
 
-Get Archaos running locally in under 3 minutes.
+```
+Request → NestJS Guards → JWT Validation → Controller → Service → Prisma
+```
 
-### 1. Prerequisites
-- **Node.js**: `v20+`
-- **Docker**: For spinning up local Postgres and Redis instances.
+| Layer | Implementation |
+|---|---|
+| **Authentication** | Stateless JWT (RS256 via `@nestjs/jwt` + `passport-jwt`) |
+| **Password Storage** | `bcrypt` with salt rounds (never stored in plain text) |
+| **Route Protection** | `JwtAuthGuard` applied globally; public routes explicitly decorated with `@Public()` |
+| **Input Validation** | `class-validator` + `class-transformer` on all DTOs; malformed payloads rejected at guard layer |
+| **CORS** | Configured per `FRONTEND_URL` env var; wildcard disabled in production |
+| **Secrets** | All keys via env vars; `.env.example` shipped, `.env` git-ignored |
+| **Database** | Prisma parameterised queries — no raw SQL, no injection surface |
+| **AI Key Isolation** | `OPENROUTER_API_KEY` / `OPENAI_API_KEY` never exposed to the frontend bundle |
 
-### 2. Clone & Install
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+| Tool | Version | Purpose |
+|---|---|---|
+| Node.js | ≥ 20 LTS | Runtime for both apps |
+| npm | ≥ 10 | Workspace package manager |
+| Docker + Compose | any recent | Local Postgres & Redis |
+| Git | any | Clone the repo |
+
+### 1. Clone
+
 ```bash
 git clone https://github.com/narwal4421/Archaos.git
-cd Archaos
+cd archaos
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
 ```
 
-### 3. Environment Configuration
-Set up your backend variables:
+### 3. Configure Environment
+
 ```bash
 cp .env.example .env
 ```
-Ensure your `.env` contains:
+
+Edit `.env` and fill in:
+
 ```env
-DATABASE_URL="postgresql://archaos_user:archaos_password@localhost:5433/archaos_db?schema=public"
+DATABASE_URL="postgresql://archaos_user:archaos_password@localhost:5433/archaos_db"
 REDIS_URL="redis://localhost:6380"
-JWT_SECRET="your-super-secret-jwt-key"
-OPENAI_API_KEY="sk-..." # Your OpenAI or OpenRouter Key (Optional, fallback exists)
+JWT_SECRET="<generate with: openssl rand -hex 64>"
+OPENROUTER_API_KEY="sk-or-..."    # for AI narration (optional)
+PORT=5000
+NODE_ENV=development
 ```
 
-Set up your frontend variables:
-```bash
-cp apps/web/.env.example apps/web/.env
-```
-*(Optionally provide Supabase keys if deploying to the cloud).*
+### 4. Start Infrastructure
 
-### 4. Spin up Infrastructure
-Launch the database and cache using Docker Compose:
 ```bash
 npm run docker:up
+# Starts Postgres 16 on :5433 and Redis 7 on :6380
 ```
 
-### 5. Migrate & Seed the Database
-Initialize the Prisma client, push the schema, and seed the interactive scenarios (like *The Cascade*):
+### 5. Database Setup
+
 ```bash
-npm run build:api
-npx prisma db seed
+cd apps/api
+npx prisma migrate dev --name init
+npx prisma db seed              # seeds built-in scenarios
+cd ../..
 ```
 
-### 6. Launch the War Room
-Start both the Vite frontend and NestJS backend concurrently:
+### 6. Run the Full Stack
+
 ```bash
 npm run dev
+# Web  → http://localhost:5173
+# API  → http://localhost:5000
 ```
-🔥 **Ready to break things?** Open [http://localhost:5173](http://localhost:5173) in your browser.
+
+That's it. Open `http://localhost:5173`, register an account, and start building your first topology.
 
 ---
 
-## 🌍 Multiplayer & Collaboration
+## 🛠️ Tech Stack
 
-Archaos isn't a single-player game. It features **Socket.io** powered collaborative incident rooms.
+### Frontend (`apps/web`)
 
-* **Live Topology Syncing**: When you drag a node or change a circuit breaker's timeout, the JSON configuration is synchronized to all connected peers in milliseconds using Last-Write-Wins (LWW) conflict resolution.
-* **Shared Chaos Injection**: Coordinate failure testing with your team. One operator simulates a CPU spike, while another monitors the live multi-signal sparklines (RPS, Errors, Latency).
-* **Broadcast Narration**: The AI's streaming causal analysis is multiplexed to all users in the room simultaneously.
+| Technology | Version | Purpose |
+|---|---|---|
+| React | 19 | UI framework |
+| Vite | 8 | Dev server + production bundler |
+| TypeScript | 5.7 | Type safety across all components |
+| Zustand | latest | Global state (auth, simulation snapshot) |
+| React Router | v7 | Client-side routing |
+| Lucide React | latest | Icon library |
+| Web Workers API | native | Off-thread simulation engine |
+| HTML5 Canvas | native | Topology rendering |
+| CSS (Vanilla) | — | Dark-mode design system, animations |
+
+### Backend (`apps/api`)
+
+| Technology | Version | Purpose |
+|---|---|---|
+| NestJS | 11 | Modular REST API framework |
+| Prisma | 6 | ORM + migrations + seeding |
+| PostgreSQL | 16 | Primary data store |
+| Redis (ioredis) | 7 | Caching + Socket.IO adapter |
+| Passport + JWT | latest | Stateless authentication |
+| bcrypt | 6 | Password hashing |
+| OpenAI SDK | 6 | AI narration via OpenRouter/OpenAI |
+| Socket.IO | latest | WebSocket transport (prepared) |
+| class-validator | 0.15 | DTO validation |
+
+### Infrastructure
+
+| Tool | Purpose |
+|---|---|
+| Docker Compose | Local Postgres + Redis services |
+| Railway | Backend API deployment (railway.toml) |
+| Vercel | Frontend deployment with SPA rewrites |
+| Prisma Migrate | Database schema versioning |
 
 ---
 
-## 📦 Monorepo Scripts
+## 🗄️ Database Schema
 
-Manage the entire workspace from the root directory:
+```
+┌──────────────┐         ┌───────────────┐
+│    User      │────1:N──│   Topology    │
+│──────────────│         │───────────────│
+│ id (uuid)    │         │ id (uuid)     │
+│ email        │         │ userId (fk)   │
+│ passwordHash │         │ name          │
+│ name         │         │ description   │
+│ createdAt    │         │ isPublic      │
+│ updatedAt    │         │ nodesJson     │  ← NodeConfig[]
+└──────────────┘         │ edgesJson     │  ← EdgeConfig[]
+       │                 │ thumbnail     │  ← base64 screenshot
+       │                 │ createdAt     │
+       │                 └───────────────┘
+       │                        │
+       │                        │ 1:N
+       │                        ▼
+       │                ┌───────────────┐
+       └──────1:N───────│  SimSession   │
+                        │───────────────│
+                        │ id (uuid)     │
+                        │ userId (fk)   │
+                        │ topologyId    │  (nullable)
+                        │ scenarioId    │  (nullable)
+                        │ durationSecs  │
+                        │ chaosEvents   │  ← JSON log of all injections
+                        │ maxErrorRate  │
+                        │ nodesKilled   │
+                        │ createdAt     │
+                        └───────────────┘
 
-| Command | Description |
-| :--- | :--- |
-| `npm run dev` | 🔥 Starts both frontend (Vite) and backend (NestJS) in watch mode. |
-| `npm run build` | Compiles both applications for production deployment. |
-| `npm run docker:up` | Boots local PostgreSQL and Redis containers. |
-| `npm run docker:down`| Tears down local infrastructure containers. |
-| `npm run lint` | Runs ESLint across all workspace packages. |
+┌──────────────────┐
+│    Scenario      │  (standalone — community/built-in blueprints)
+│──────────────────│
+│ id (uuid)        │
+│ name             │
+│ description      │
+│ category         │  CASCADE | RETRY_STORM | THUNDERING_HERD | …
+│ difficulty       │  BEGINNER | INTERMEDIATE | ADVANCED
+│ nodesJson        │  ← pre-built NodeConfig[]
+│ edgesJson        │  ← pre-built EdgeConfig[]
+│ chaosScript      │  ← timed auto-inject events
+│ walkthroughScript│  ← AI prediction checkpoints
+│ isBuiltIn        │
+│ playCount        │
+│ upvotes          │
+│ createdAt        │
+└──────────────────┘
+```
 
-*To run commands for a specific app, append `-w apps/web` or `-w apps/api`.*
+---
+
+## 📜 Available Scripts
+
+### Root (Monorepo)
+
+```bash
+npm run dev           # Start web + API concurrently (with hot reload)
+npm run dev:web       # Start only Vite dev server  (port 5173)
+npm run dev:api       # Start only NestJS dev server (port 5000, --watch)
+npm run build         # Production build: API then Web
+npm run build:web     # Vite production build → apps/web/dist
+npm run build:api     # NestJS tsc build → apps/api/dist
+npm run docker:up     # Start Postgres + Redis containers (detached)
+npm run docker:down   # Stop and remove containers
+```
+
+### API (`apps/api`)
+
+```bash
+npm run start:prod    # migrate + seed + run dist/main (production)
+npm run lint          # ESLint with auto-fix
+npm run format        # Prettier format
+npm run test          # Jest unit tests
+npm run test:cov      # Tests with coverage report
+npm run test:e2e      # End-to-end tests (supertest)
+```
+
+### Database
+
+```bash
+npx prisma migrate dev --name <migration-name>   # Create + apply migration
+npx prisma migrate deploy                         # Apply pending migrations (prod)
+npx prisma db seed                                # Seed built-in scenarios
+npx prisma studio                                 # Visual DB browser (localhost:5555)
+npx prisma generate                               # Re-generate Prisma client
+```
+
+### CLI — Headless Simulation
+
+```bash
+node bin/cli.js config.json --url http://localhost:5000
+```
+
+**`config.json` format:**
+
+```json
+{
+  "nodes": [...],
+  "edges": [...],
+  "chaosScript": [
+    { "atSec": 5, "type": "KILL_NODE", "targetId": "db-primary" },
+    { "atSec": 15, "type": "ADD_LATENCY", "targetId": "api-edge-1", "value": 500 }
+  ],
+  "durationSecs": 30
+}
+```
+
+**Exit codes:** `0` = SLA compliant (avg error rate < 5%), `1` = SLA breached.  
+Designed to drop into any CI/CD pipeline as a quality gate.
+
+---
+
+## 🌐 Node Types Supported
+
+| Node Type | Icon | Description |
+|---|---|---|
+| `SERVICE` | ⬡ | Generic microservice with replicas, CPU, memory limits |
+| `API_GATEWAY` | 🔀 | Ingress gateway with routing |
+| `LOAD_BALANCER` | ⚖️ | Round-robin, least-connections, or IP-hash |
+| `DATABASE` | 🗄️ | PostgreSQL, MongoDB, Redis, Cassandra with replication modes |
+| `MESSAGE_QUEUE` | 📨 | Kafka, RabbitMQ, SQS with queue depth and backpressure |
+| `EXTERNAL_SERVICE` | 🌐 | Third-party dependency with configurable reliability% |
+| `KAFKA` | ⚡ | Apache Kafka broker node |
+| `RABBITMQ` | 🐇 | RabbitMQ broker node |
+| `ELASTICSEARCH` | 🔍 | Search database cluster node |
+| `REDIS` | ⚡ | Redis cache / pub-sub node |
+| `CDN` | 🌍 | Content delivery network with warmup simulation |
+| `CDN_EDGE` | 📡 | Geographic cache edge pop |
+
+---
+
+## 💥 Chaos Types Available
+
+| Chaos Action | What It Does |
+|---|---|
+| `KILL_NODE` | Instantly sets node health to `DEAD`; downstream deps cascade |
+| `CPU_SPIKE` | Pins a node's CPU to N% — triggers saturation and request drops |
+| `MEMORY_LEAK` | Activates heap growth at +1.2%/tick until OOM restart cycle |
+| `ADD_LATENCY` | Adds N ms to an edge; p99 propagates upstream |
+| `PACKET_LOSS` | N% of requests on an edge silently dropped |
+| `NETWORK_PARTITION` | Full edge isolation — splits topology like a real CAP event |
+| `TOGGLE_CIRCUIT_BREAKER` | Opens/closes circuit breaker on a specific edge |
+| `TRAFFIC_SPIKE` | Multiplies incoming RPS by N× to test saturation limits |
+
+---
+
+## 🌐 API Reference
+
+The REST API is served at `/api` (default port `5000`).
+
+| Method | Endpoint | Auth | Description |
+|---|---|:---:|---|
+| `GET` | `/` | ❌ | Health check — returns `{ status: 'ok' }` |
+| `POST` | `/auth/register` | ❌ | Create account |
+| `POST` | `/auth/login` | ❌ | Get JWT token |
+| `GET` | `/topologies` | ✅ | List user's saved topologies |
+| `POST` | `/topologies` | ✅ | Save a new topology |
+| `PATCH` | `/topologies/:id` | ✅ | Update topology |
+| `DELETE` | `/topologies/:id` | ✅ | Delete topology |
+| `GET` | `/scenarios` | ✅ | List all scenarios (built-in + community) |
+| `POST` | `/scenarios` | ✅ | Publish a community scenario |
+| `POST` | `/scenarios/:id/upvote` | ✅ | Upvote a community scenario |
+| `POST` | `/sessions` | ✅ | Record a completed simulation session |
+| `POST` | `/blast/analyze` | ✅ | Compute blast radius for a topology |
+| `POST` | `/run-headless` | ❌ | Run a simulation headlessly (CI mode) |
+
+**Authentication:** Pass `Authorization: Bearer <token>` header.
+
+---
+
+## 🛰️ Infrastructure Import
+
+Archaos can parse three infrastructure-as-code formats and auto-generate a topology:
+
+### Docker Compose
+```yaml
+services:
+  api:
+    image: node:20
+    depends_on: [postgres, redis]
+  postgres:
+    image: postgres:16
+  redis:
+    image: redis:7
+```
+→ Auto-creates `SERVICE` node for `api`, `DATABASE` for `postgres`, `DATABASE` node for `redis`, with edges from `api` → `postgres` and `api` → `redis`.
+
+### Kubernetes YAML
+Parses `Deployment`, `Service`, and `Ingress` objects:
+- `Deployment` → `SERVICE` node (replicas extracted)
+- `Service` (LoadBalancer) → `LOAD_BALANCER` node
+- `Ingress` → `API_GATEWAY` node
+
+### Terraform HCL
+Regex-based extraction of `aws_instance`, `aws_db_instance`, `aws_elb`, `aws_cloudfront_distribution` → corresponding node types, linked by variable references.
 
 ---
 
 ## ☁️ Deployment Guide
 
-Archaos is cloud-ready and designed to be deployed on modern serverless/PaaS infrastructure.
+### Frontend → Vercel
 
-### Backend (Railway / Render)
-1. Provision a PostgreSQL (v16) and Redis (v7) instance.
-2. Link your GitHub repo and point the root directory to `apps/api`.
-3. Set the build command: `npm run build:api`.
-4. Set the start command: `npm run start:prod`.
-5. Supply the `.env` variables from your local setup.
+```bash
+vercel --prod
+# vercel.json already configures SPA rewrites for React Router
+```
 
-### Frontend (Vercel / Netlify)
-1. Import the repository and set the root directory to `apps/web`.
-2. The framework preset should auto-detect Vite.
-3. Build command: `tsc -b && vite build` | Output directory: `dist`.
-4. Supply your `VITE_SUPABASE_URL` and anon key.
+Or connect your GitHub repo to Vercel — it auto-detects Vite.
+
+**Build settings:**
+- Build command: `npm run build:web`
+- Output directory: `apps/web/dist`
+- Root: `apps/web`
+
+### Backend → Railway
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+railway login
+railway up
+```
+
+`railway.toml` is already configured. Add these environment variables in the Railway dashboard:
+- `DATABASE_URL` (Railway Postgres plugin auto-injects)
+- `REDIS_URL` (Railway Redis plugin auto-injects)
+- `JWT_SECRET`
+- `OPENROUTER_API_KEY`
+
+### Self-Hosted (Docker)
+
+```dockerfile
+# The API ships with a production Dockerfile
+docker build -t archaos-api ./apps/api
+docker run -p 5000:5000 \
+  -e DATABASE_URL=... \
+  -e REDIS_URL=... \
+  -e JWT_SECRET=... \
+  archaos-api
+```
+
+---
+
+## ✅ Full Feature Checklist
+
+### Core Canvas & Editor
+- [x] Drag-and-drop node palette
+- [x] Edge connection with label + type selector
+- [x] In-canvas live telemetry (RPS, error%, p99, CPU, memory, queue)
+- [x] Node health colour coding (green → amber → red → dead)
+- [x] Circuit breaker state visualisation per edge
+- [x] Canvas pan & zoom
+- [x] Topology save / load / delete
+- [x] Thumbnail screenshot on save (base64)
+- [x] Version checkpoint system (v1/v2/v3) + visual diff viewer
+
+### Simulation Engine
+- [x] Off-thread Web Worker simulation
+- [x] Priority queue discrete-event architecture
+- [x] Node state machine (HEALTHY → DEAD → RECOVERING)
+- [x] CPU / memory / replica saturation models
+- [x] OOM restart cycles
+- [x] Queue backpressure modelling
+- [x] Edge latency propagation
+- [x] Circuit breaker FSM per edge
+- [x] Retry storm amplification
+- [x] Cascading failure propagation
+- [x] CDN cache warmup behaviour
+- [x] Custom YAML chaos script execution
+
+### Chaos Injection
+- [x] Kill node
+- [x] CPU spike
+- [x] Memory leak
+- [x] Add latency to edge
+- [x] Packet loss on edge
+- [x] Network partition (full edge isolation)
+- [x] Traffic spike multiplier
+- [x] Toggle circuit breaker
+
+### Infrastructure Import
+- [x] Docker Compose parser
+- [x] Kubernetes YAML parser
+- [x] Terraform HCL parser
+- [x] Auto-layout (topological tier positioning)
+- [x] Glassmorphic import dialog with tabbed interface
+
+### Scenarios & Marketplace
+- [x] Built-in: The Cascade, Retry Storm, Thundering Herd, Split Brain, Graceful Degradation, Queue Flood, Memory Leak, Traffic Spike
+- [x] Community scenario publishing
+- [x] Upvoting system
+- [x] Category + difficulty filtering
+- [x] Search
+- [x] Share scenario modal
+
+### Cloud Blueprints
+- [x] AWS 3-Tier Web App template
+- [x] Netflix Microservices stack template
+- [x] Uber Dispatch stack template
+- [x] GCP / Azure AKS templates
+
+### Node Types
+- [x] SERVICE, DATABASE, MESSAGE_QUEUE, LOAD_BALANCER, API_GATEWAY
+- [x] EXTERNAL_SERVICE, CDN, CDN_EDGE, KAFKA, RABBITMQ, ELASTICSEARCH, REDIS
+- [x] Logical layer tagging (FRONTEND / API / DATA)
+
+### Authentication & Users
+- [x] Register / Login with bcrypt + JWT
+- [x] Protected routes with JwtAuthGuard
+- [x] Session recording (duration, events, peak error rate)
+
+### AI Features
+- [x] Real-time GPT narration explaining what's happening
+- [x] Prediction checkpoints in scenario walkthroughs
+- [x] OpenRouter + OpenAI backend support
+
+### Blast Radius
+- [x] Upstream graph walk from selected node
+- [x] Visual blast zone highlighting on canvas
+
+### Headless / CI
+- [x] `POST /run-headless` REST endpoint
+- [x] `bin/cli.js` CLI tool
+- [x] SLA compliance exit codes (0 / 1)
+
+### Learn Center
+- [x] CAP Theorem interactive lesson
+- [x] Cascading failures module
+- [x] Circuit breakers module
+- [x] Retry storms and backoff module
+- [x] Thundering herd / cache stampede module
+- [x] Memory leaks module
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions to make Archaos the ultimate chaos engineering educational tool!
+Contributions are what make open source thrive. Any contribution you make is **genuinely appreciated**.
 
-1. **Fork** the repo on GitHub.
-2. **Clone** your fork locally.
-3. **Branch** out: `git checkout -b feat/epic-new-chaos-mode`
-4. **Commit** using conventional commits: `git commit -m "feat: add BGP route flapping simulation"`
-5. **Push** and open a Pull Request against the `main` branch.
+### Workflow
 
-If you find a bug or have a feature request, please open an Issue.
+```bash
+# 1. Fork the repository on GitHub
+
+# 2. Clone your fork
+git clone https://github.com/<your-username>/Archaos.git
+cd archaos
+
+# 3. Create a feature branch (never commit to main)
+git checkout -b feat/your-amazing-feature
+
+# 4. Make your changes and commit following Conventional Commits
+git commit -m "feat: add real-time collaboration via WebSocket"
+git commit -m "fix: circuit breaker not resetting after recovery"
+git commit -m "docs: add deployment guide for Fly.io"
+
+# 5. Push and open a Pull Request
+git push origin feat/your-amazing-feature
+```
+
+### Commit Convention
+
+| Prefix | When to use |
+|---|---|
+| `feat:` | New feature |
+| `fix:` | Bug fix |
+| `docs:` | Documentation only |
+| `refactor:` | Code change, no feature/fix |
+| `test:` | Adding or updating tests |
+| `chore:` | Tooling, config, CI |
+
+### What We're Looking For
+
+- New chaos injection types (DNS failures, disk I/O exhaustion)
+- Additional infrastructure parsers (AWS CDK, Pulumi)
+- Real-time collaboration (WebSocket multi-cursor topology editing)
+- Simulation replay & export (JSON recording → playback)
+- Dark/light theme toggle
+- Unit tests for simulation engine edge cases
+
+Please open an issue before starting large features so we can discuss the approach.
 
 ---
 
-## 📜 License
+## 📄 License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+Distributed under the **MIT License**.  
+See [`LICENSE`](./LICENSE) for full text.
+
+```
+MIT License — Copyright (c) 2026 Archaos Contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software...
+```
+
+---
 
 <div align="center">
-  <br />
-  <p>
-    <b>Built with ❤️ for Distributed Systems Engineers</b>
-  </p>
-  <p>
-    <i>If Archaos helped you understand systemic failure, please consider giving it a ⭐!</i>
-  </p>
+
+**Built with ❤️ and controlled chaos.**
+
+*If Archaos helped you understand distributed systems, please consider giving it a ⭐ — it means everything.*
+
+[![GitHub stars](https://img.shields.io/github/stars/narwal4421/Archaos?style=social)](https://github.com/narwal4421/Archaos/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/narwal4421/Archaos?style=social)](https://github.com/narwal4421/Archaos/network/members)
+
 </div>
