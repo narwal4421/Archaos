@@ -26,7 +26,7 @@
 
 <br/>
 
-[🚀 Live Demo]((https://archaos-tau.vercel.app/)) ·  · [🐛 Report Bug](https://github.com/narwal4421/Archaos/issues) · [✨ Request Feature](https://github.com/narwal4421/Archaos/issues)
+[🚀 Live Demo](https://archaos-tau.vercel.app/) ·  · [🐛 Report Bug](https://github.com/narwal4421/Archaos/issues) · [✨ Request Feature](https://github.com/narwal4421/Archaos/issues)
 
 </div>
 
