@@ -1,6 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 
+export interface CreateScenarioDto {
+  name: string;
+  description: string;
+  category: string;
+  difficulty: string;
+  nodesJson: any;
+  edgesJson: any;
+  chaosScript: any;
+  walkthroughScript: any;
+}
+
 @Injectable()
 export class ScenariosService {
   constructor(private prisma: PrismaService) {}
@@ -33,7 +44,7 @@ export class ScenariosService {
     });
   }
 
-  async create(data: { name: string; description: string; category: string; difficulty: string; nodesJson: any; edgesJson: any; chaosScript: any; walkthroughScript: any }) {
+  async create(data: CreateScenarioDto) {
     return this.prisma.scenario.create({
       data: {
         ...data,

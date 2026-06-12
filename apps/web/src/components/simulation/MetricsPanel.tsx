@@ -79,14 +79,21 @@ export function MetricsPanel() {
 
   useEffect(() => {
     if (simState.status === 'IDLE') {
-      setRpsHistory([])
-      setErrHistory([])
-      setP99History([])
       prevTimeSec.current = 0
       return
     }
     // Only push once per new second tick
     if (simState.currentTimeSec === prevTimeSec.current) return
+
+    // Clear and start fresh if transitioning from IDLE
+    if (prevTimeSec.current === 0) {
+      setRpsHistory([simState.totalRps])
+      setErrHistory([simState.totalErrorRatePercent])
+      setP99History([simState.systemP99LatencyMs])
+      prevTimeSec.current = simState.currentTimeSec
+      return
+    }
+
     prevTimeSec.current = simState.currentTimeSec
 
     setRpsHistory(h => { const n = [...h, simState.totalRps]; if (n.length > 60) n.shift(); return n })
@@ -181,7 +188,7 @@ export function MetricsPanel() {
               {isRunning && rpsHistory.length > 0 ? rpsHistory[rpsHistory.length - 1].toLocaleString() : '—'}
             </span>
           </div>
-          <Sparkline data={rpsHistory} color="#7C3AED" height={30} />
+          <Sparkline data={isRunning ? rpsHistory : []} color="#7C3AED" height={30} />
         </div>
 
         {/* Error rate chart */}
@@ -193,7 +200,7 @@ export function MetricsPanel() {
               {isRunning && errHistory.length > 0 ? `${errHistory[errHistory.length - 1].toFixed(1)}%` : '—'}
             </span>
           </div>
-          <Sparkline data={errHistory} color="#EF4444" height={30} />
+          <Sparkline data={isRunning ? errHistory : []} color="#EF4444" height={30} />
         </div>
 
         {/* P99 chart */}
@@ -205,7 +212,7 @@ export function MetricsPanel() {
               {isRunning && p99History.length > 0 ? `${p99History[p99History.length - 1]}ms` : '—'}
             </span>
           </div>
-          <Sparkline data={p99History} color="#F97316" height={30} />
+          <Sparkline data={isRunning ? p99History : []} color="#F97316" height={30} />
         </div>
       </div>
 

@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Param, UseGuards, Body } from '@nestjs/common';
-import { ScenariosService } from './scenarios.service';
+import { ScenariosService, CreateScenarioDto } from './scenarios.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -18,7 +18,7 @@ export class ScenariosController {
   }
 
   @Post()
-  async create(@Body() data: any) {
+  async create(@Body() data: CreateScenarioDto) {
     return this.scenariosService.create(data);
   }
 

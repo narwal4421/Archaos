@@ -182,16 +182,23 @@ export function SimControls() {
   const [scriptError, setScriptError] = useState<string | null>(null)
   const [scriptSuccess, setScriptSuccess] = useState(false)
 
+  interface ParsedEvent {
+    time: number
+    type: ChaosType
+    target: string
+    value?: number
+  }
+
   const handleRunScript = () => {
     setScriptError(null)
     setScriptSuccess(false)
     try {
       const items = customScript.split('- ')
-      const parsed: any[] = []
+      const parsed: ParsedEvent[] = []
       for (const item of items) {
         if (!item.trim() || item.startsWith('#')) continue
         const lines = item.split('\n')
-        const obj: any = {}
+        const obj: Partial<ParsedEvent> = {}
         for (const line of lines) {
           const parts = line.split(':')
           if (parts.length >= 2) {
@@ -204,7 +211,7 @@ export function SimControls() {
           }
         }
         if (obj.time !== undefined && obj.type && obj.target) {
-          parsed.push(obj)
+          parsed.push(obj as ParsedEvent)
         }
       }
 
@@ -221,8 +228,9 @@ export function SimControls() {
       })
 
       setScriptSuccess(true)
-    } catch (e: any) {
-      setScriptError(e.message || "Failed to parse script.")
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : "Failed to parse script."
+      setScriptError(errorMessage)
     }
   }
 
