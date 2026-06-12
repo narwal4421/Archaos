@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useSimulationStore } from '../stores/simulationStore'
 import { useCanvasStore } from '../stores/canvasStore'
 import { useNarrationStore } from '../stores/narrationStore'
@@ -46,37 +46,49 @@ export function useSimulation() {
     }
   }, [appendEvent, applyTick, setWorker])
 
-  const getTopology = () => {
+  const getTopology = useCallback(() => {
     const nodes: NodeConfig[] = Object.values(nodeConfigs)
     const edges: EdgeConfig[] = Object.values(edgeConfigs)
     return { nodes, edges }
-  }
+  }, [nodeConfigs, edgeConfigs])
 
-  const initialize = (traffic: TrafficProfile) => {
+  const initialize = useCallback((traffic: TrafficProfile) => {
     const topology = getTopology()
     workerRef.current?.postMessage({ type: 'INITIALIZE', payload: { topology, traffic } })
-  }
+  }, [getTopology])
 
-  const start = (traffic: TrafficProfile) => {
+  const start = useCallback((traffic: TrafficProfile) => {
     initialize(traffic)
     workerRef.current?.postMessage({ type: 'START' })
-  }
+  }, [initialize])
 
-  const pause = () => workerRef.current?.postMessage({ type: 'PAUSE' })
-  const resume = () => workerRef.current?.postMessage({ type: 'RESUME' })
-  const reset = () => workerRef.current?.postMessage({ type: 'RESET' })
+  const pause = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'PAUSE' })
+  }, [])
 
-  const setSpeed = (multiplier: number) =>
+  const resume = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'RESUME' })
+  }, [])
+
+  const reset = useCallback(() => {
+    workerRef.current?.postMessage({ type: 'RESET' })
+  }, [])
+
+  const setSpeed = useCallback((multiplier: number) => {
     workerRef.current?.postMessage({ type: 'SET_SPEED', payload: { multiplier } })
+  }, [])
 
-  const setTraffic = (profile: TrafficProfile) =>
+  const setTraffic = useCallback((profile: TrafficProfile) => {
     workerRef.current?.postMessage({ type: 'SET_TRAFFIC', payload: { profile } })
+  }, [])
 
-  const injectChaos = (action: ChaosAction) =>
+  const injectChaos = useCallback((action: ChaosAction) => {
     workerRef.current?.postMessage({ type: 'INJECT_CHAOS', payload: { action } })
+  }, [])
 
-  const scheduleChaos = (timeSec: number, action: ChaosAction) =>
+  const scheduleChaos = useCallback((timeSec: number, action: ChaosAction) => {
     workerRef.current?.postMessage({ type: 'SCHEDULE_CHAOS', payload: { timeSec, action } })
+  }, [])
 
   return { start, pause, resume, reset, setSpeed, setTraffic, injectChaos, scheduleChaos }
 }

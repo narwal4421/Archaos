@@ -1,17 +1,131 @@
+import { useState } from 'react'
 import { useCanvasStore } from '../../stores/canvasStore'
 import { useChaos } from '../../hooks/useChaos'
 import { useBlastRadius } from '../../hooks/useBlastRadius'
-import { X, Play, RefreshCw, AlertTriangle, ShieldAlert, Cpu, Database, Layers, Radio } from 'lucide-react'
+import { useSimulationStore } from '../../stores/simulationStore'
+import {
+  X, Play, RefreshCw, AlertTriangle, ShieldAlert,
+  Cpu, Database, Layers, Radio, ChevronRight, Info,
+} from 'lucide-react'
+
+const PANEL_STYLE: React.CSSProperties = {
+  position: 'fixed',
+  top: 72,
+  right: 12,
+  bottom: 12,
+  width: 340,
+  background: '#0A0D12',
+  border: '1px solid #1A2030',
+  borderRadius: 14,
+  boxShadow: '0 24px 64px rgba(0,0,0,0.6)',
+  zIndex: 50,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  fontFamily: "'DM Sans', sans-serif",
+  color: '#E8EDF3',
+  animation: 'slideInRight 0.2s ease',
+}
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <div style={{
+      fontSize: 9, fontFamily: "'JetBrains Mono', monospace",
+      letterSpacing: 1.5, color: '#3A4455', textTransform: 'uppercase',
+      marginBottom: 5,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SectionHead({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      fontSize: 10, fontFamily: "'JetBrains Mono', monospace",
+      letterSpacing: 1.5, color: '#8B95A3', textTransform: 'uppercase',
+      marginBottom: 10,
+    }}>
+      {icon}{label}
+    </div>
+  )
+}
+
+function ChaosBtn({
+  onClick, color = '#EF4444', icon, label, disabled, disabledTip,
+}: {
+  onClick: () => void
+  color?: string
+  icon: React.ReactNode
+  label: string
+  disabled?: boolean
+  disabledTip?: string
+}) {
+  const [showTip, setShowTip] = useState(false)
+
+  const handleClick = () => {
+    if (disabled) { setShowTip(true); setTimeout(() => setShowTip(false), 2500); return }
+    onClick()
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={handleClick}
+        style={{
+          width: '100%',
+          padding: '8px 10px',
+          background: disabled ? '#0D1018' : `${color}10`,
+          border: `1px solid ${disabled ? '#141820' : color + '30'}`,
+          borderRadius: 8,
+          color: disabled ? '#2A3140' : color,
+          fontSize: 11, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+          display: 'flex', alignItems: 'center', gap: 6,
+          transition: 'all 0.15s',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+        onMouseEnter={e => {
+          if (!disabled) {
+            e.currentTarget.style.background = `${color}20`
+            e.currentTarget.style.borderColor = `${color}60`
+          }
+        }}
+        onMouseLeave={e => {
+          if (!disabled) {
+            e.currentTarget.style.background = `${color}10`
+            e.currentTarget.style.borderColor = `${color}30`
+          }
+        }}
+      >
+        {icon}{label}
+      </button>
+      {showTip && disabledTip && (
+        <div style={{
+          position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, right: 0,
+          background: '#1A2030', border: '1px solid #2D3748',
+          borderRadius: 6, padding: '6px 10px',
+          fontSize: 10, color: '#F59E0B', lineHeight: 1.5, zIndex: 999,
+        }}>
+          ⚠ {disabledTip}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function NodeConfigPanel() {
   const { selectedNodeId, setSelectedNodeId, nodeConfigs, setNodeConfig, nodes, edges } = useCanvasStore()
   const chaos = useChaos()
-  const { result: blastResult, loading: blastLoading, analyze: runBlast } = useBlastRadius()
+  const { result: blastResult, loading: blastLoading, error: blastError, analyze: runBlast } = useBlastRadius()
+  const simStatus = useSimulationStore(s => s.simState.status)
 
   if (!selectedNodeId) return null
-
   const config = nodeConfigs[selectedNodeId]
   if (!config) return null
+
+  const isSimRunning = simStatus === 'RUNNING'
+  const chaosDisabledTip = 'Start the simulation first — use the ▶ button in the top toolbar.'
 
   const handleUpdate = (field: string, val: unknown) => {
     setNodeConfig(selectedNodeId, { [field]: val })
@@ -21,152 +135,203 @@ export function NodeConfigPanel() {
     runBlast(nodes, edges, selectedNodeId)
   }
 
+  const riskColors: Record<string, string> = {
+    CRITICAL: '#EF4444',
+    HIGH: '#F97316',
+    MEDIUM: '#F59E0B',
+    LOW: '#10B981',
+  }
+
   return (
-    <div className="fixed top-20 right-4 bottom-4 w-96 bg- border border- rounded-xl shadow-2xl z-50 flex flex-col overflow-hidden text-slate-100 animate-slide-in">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border- bg-">
-        <div>
-          <h3 className="text-lg font-semibold flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
-            Configure Node
-          </h3>
-          <p className="text-xs text-slate-400 font-mono">{config.id}</p>
+    <>
+      <style>{`
+        @keyframes slideInRight {
+          from { opacity:0; transform:translateX(16px); }
+          to   { opacity:1; transform:translateX(0); }
+        }
+      `}</style>
+      <div style={PANEL_STYLE}>
+        {/* ── Header ── */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px',
+          borderBottom: '1px solid #141820',
+          background: '#07090D',
+          flexShrink: 0,
+        }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 7 }}>
+              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#6366F1', boxShadow: '0 0 8px #6366F1', flexShrink: 0 }} />
+              Configure Node
+            </div>
+            <div style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#3A4455', marginTop: 2 }}>
+              {config.id}
+            </div>
+          </div>
+          <button
+            onClick={() => setSelectedNodeId(null)}
+            style={{
+              background: 'none', border: '1px solid #1A2030', borderRadius: 6,
+              color: '#4A5568', cursor: 'pointer', padding: '4px 6px',
+              display: 'flex', alignItems: 'center',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#2D3748'; e.currentTarget.style.color = '#E8EDF3' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#1A2030'; e.currentTarget.style.color = '#4A5568' }}
+          >
+            <X size={14} />
+          </button>
         </div>
-        <button
-          onClick={() => setSelectedNodeId(null)}
-          className="p-1 hover:bg-slate-800 rounded-lg transition-colors text-slate-400 hover:text-slate-100"
-        >
-          <X size={18} />
-        </button>
-      </div>
 
-      {/* Scrollable Contents */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Basic Parameters */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">Parameters</h4>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Label</label>
-              <input
-                type="text"
-                value={config.label}
-                onChange={(e) => handleUpdate('label', e.target.value)}
-                className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none focus:border-indigo-500"
-              />
-            </div>
+        {/* ── Scrollable body ── */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-            <div>
-              <label className="text-xs text-slate-400 block mb-1">Logical Layer</label>
-              <select
-                value={config.layer ?? ''}
-                onChange={(e) => handleUpdate('layer', e.target.value || undefined)}
-                className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none text-slate-100"
-              >
-                <option value="">None</option>
-                <option value="FRONTEND">Frontend Layer</option>
-                <option value="API">API Layer</option>
-                <option value="DATA">Data Layer</option>
-              </select>
-            </div>
+          {/* Parameters */}
+          <div>
+            <SectionHead icon={<Cpu size={11} />} label="Parameters" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
 
-            {config.type === 'SERVICE' && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
+              {/* Label */}
+              <div>
+                <Label>Label</Label>
+                <input
+                  type="text"
+                  value={config.label}
+                  onChange={e => handleUpdate('label', e.target.value)}
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    background: '#07090D', border: '1px solid #1A2030',
+                    borderRadius: 7, padding: '7px 10px',
+                    fontSize: 12, color: '#E8EDF3', outline: 'none',
+                    fontFamily: "'DM Sans', sans-serif",
+                  }}
+                  onFocus={e => e.currentTarget.style.borderColor = '#6366F1'}
+                  onBlur={e => e.currentTarget.style.borderColor = '#1A2030'}
+                />
+              </div>
+
+              {/* Logical Layer */}
+              <div>
+                <Label>Logical Layer</Label>
+                <select
+                  value={config.layer ?? ''}
+                  onChange={e => handleUpdate('layer', e.target.value || undefined)}
+                  style={{
+                    width: '100%', background: '#07090D', border: '1px solid #1A2030',
+                    borderRadius: 7, padding: '7px 10px',
+                    fontSize: 12, color: '#E8EDF3', outline: 'none',
+                  }}
+                >
+                  <option value="">None</option>
+                  <option value="FRONTEND">Frontend Layer</option>
+                  <option value="API">API Layer</option>
+                  <option value="DATA">Data Layer</option>
+                </select>
+              </div>
+
+              {/* SERVICE-specific */}
+              {config.type === 'SERVICE' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                    <div>
+                      <Label>Replicas</Label>
+                      <input type="number" min={1} max={10}
+                        value={config.replicas ?? 1}
+                        onChange={e => handleUpdate('replicas', parseInt(e.target.value) || 1)}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: '#07090D', border: '1px solid #1A2030',
+                          borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <Label>Latency (ms)</Label>
+                      <input type="number" min={10} max={5000}
+                        value={config.processingTimeMs ?? 50}
+                        onChange={e => handleUpdate('processingTimeMs', parseInt(e.target.value) || 50)}
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: '#07090D', border: '1px solid #1A2030',
+                          borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                        }}
+                      />
+                    </div>
+                  </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Replicas</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={10}
-                      value={config.replicas ?? 1}
-                      onChange={(e) => handleUpdate('replicas', parseInt(e.target.value) || 1)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none"
+                    <Label>CPU Limit (%)</Label>
+                    <input type="range" min={50} max={200} step={10}
+                      value={config.cpuLimit ?? 100}
+                      onChange={e => handleUpdate('cpuLimit', parseInt(e.target.value) || 100)}
+                      style={{ width: '100%', accentColor: '#6366F1' }}
                     />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: '#3A4455', fontFamily: "'JetBrains Mono', monospace" }}>
+                      <span>50%</span>
+                      <span style={{ color: '#8B9CF8' }}>{config.cpuLimit ?? 100}% CPU</span>
+                      <span>200%</span>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-slate-400 block mb-1">Latency (ms)</label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={5000}
-                      value={config.processingTimeMs ?? 50}
-                      onChange={(e) => handleUpdate('processingTimeMs', parseInt(e.target.value) || 50)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 block mb-1">CPU Limit (%)</label>
-                  <input
-                    type="range"
-                    min={50}
-                    max={200}
-                    step={10}
-                    value={config.cpuLimit ?? 100}
-                    onChange={(e) => handleUpdate('cpuLimit', parseInt(e.target.value) || 100)}
-                    className="w-full accent-indigo-500"
-                  />
-                  <div className="flex justify-between text-[10px] text-slate-400">
-                    <span>50%</span>
-                    <span>{config.cpuLimit ?? 100}% CPU</span>
-                    <span>200%</span>
-                  </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
 
-            {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
+              {/* DATABASE-specific */}
+              {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Pool Size</label>
-                    <input
-                      type="number"
-                      min={1}
-                      max={100}
+                    <Label>Pool Size</Label>
+                    <input type="number" min={1} max={100}
                       value={config.connectionPoolSize ?? 20}
-                      onChange={(e) => handleUpdate('connectionPoolSize', parseInt(e.target.value) || 20)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none"
+                      onChange={e => handleUpdate('connectionPoolSize', parseInt(e.target.value) || 20)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        background: '#07090D', border: '1px solid #1A2030',
+                        borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                      }}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Engine</label>
+                    <Label>Engine</Label>
                     <select
                       value={config.dbType ?? 'POSTGRESQL'}
-                      onChange={(e) => handleUpdate('dbType', e.target.value)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none text-slate-100"
+                      onChange={e => handleUpdate('dbType', e.target.value)}
+                      style={{
+                        width: '100%', background: '#07090D', border: '1px solid #1A2030',
+                        borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                      }}
                     >
                       <option value="POSTGRESQL">PostgreSQL</option>
-                      <option value="REDIS">Redis Cache</option>
+                      <option value="REDIS">Redis</option>
                       <option value="MONGODB">MongoDB</option>
                       <option value="CASSANDRA">Cassandra</option>
                     </select>
                   </div>
                 </div>
-              </>
-            )}
+              )}
 
-            {(config.type === 'MESSAGE_QUEUE' || config.type === 'KAFKA' || config.type === 'RABBITMQ') && (
-              <>
-                <div className="grid grid-cols-2 gap-3">
+              {/* QUEUE-specific */}
+              {(config.type === 'MESSAGE_QUEUE' || config.type === 'KAFKA' || config.type === 'RABBITMQ') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Max Queue Size</label>
-                    <input
-                      type="number"
-                      min={10}
-                      max={10000}
+                    <Label>Max Queue Size</Label>
+                    <input type="number" min={10} max={10000}
                       value={config.maxQueueDepth ?? 300}
-                      onChange={(e) => handleUpdate('maxQueueDepth', parseInt(e.target.value) || 300)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none"
+                      onChange={e => handleUpdate('maxQueueDepth', parseInt(e.target.value) || 300)}
+                      style={{
+                        width: '100%', boxSizing: 'border-box',
+                        background: '#07090D', border: '1px solid #1A2030',
+                        borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                      }}
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-slate-400 block mb-1">Broker Type</label>
+                    <Label>Broker Type</Label>
                     <select
                       value={config.queueType ?? 'KAFKA'}
-                      onChange={(e) => handleUpdate('queueType', e.target.value)}
-                      className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none text-slate-100"
+                      onChange={e => handleUpdate('queueType', e.target.value)}
+                      style={{
+                        width: '100%', background: '#07090D', border: '1px solid #1A2030',
+                        borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                      }}
                     >
                       <option value="KAFKA">Apache Kafka</option>
                       <option value="RABBITMQ">RabbitMQ</option>
@@ -174,148 +339,206 @@ export function NodeConfigPanel() {
                     </select>
                   </div>
                 </div>
-              </>
-            )}
+              )}
 
-            {config.type === 'LOAD_BALANCER' && (
-              <div>
-                <label className="text-xs text-slate-400 block mb-1">Algorithm</label>
-                <select
-                  value={config.algorithm ?? 'ROUND_ROBIN'}
-                  onChange={(e) => handleUpdate('algorithm', e.target.value)}
-                  className="w-full bg-slate-950 border border- rounded px-2.5 py-1.5 text-sm focus:outline-none text-slate-100"
-                >
-                  <option value="ROUND_ROBIN">Round Robin</option>
-                  <option value="LEAST_CONNECTIONS">Least Connections</option>
-                  <option value="IP_HASH">IP Hash</option>
-                </select>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Inject Chaos Section */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-            <AlertTriangle size={15} className="text-amber-500" />
-            Inject Chaos
-          </h4>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => chaos.killNode(config.id)}
-              className="py-2 px-3 bg- hover:bg- border border- hover:border- rounded-lg text-xs font-medium text-red-200 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <ShieldAlert size={14} />
-              Kill Node
-            </button>
-            <button
-              onClick={() => chaos.recoverNode(config.id)}
-              className="py-2 px-3 bg- hover:bg- border border- hover:border- rounded-lg text-xs font-medium text-emerald-200 transition-colors flex items-center justify-center gap-1.5"
-            >
-              <RefreshCw size={14} className="animate-spin-slow" />
-              Recover
-            </button>
-
-            {config.type === 'SERVICE' && (
-              <>
-                <button
-                  onClick={() => chaos.spikeCpu(config.id)}
-                  className="py-2 px-3 bg- hover:bg-slate-750 border border- rounded-lg text-xs text-slate-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Cpu size={14} className="text-indigo-400" />
-                  Spike CPU
-                </button>
-                <button
-                  onClick={() => chaos.applyMemoryPressure(config.id)}
-                  className="py-2 px-3 bg- hover:bg-slate-750 border border- rounded-lg text-xs text-slate-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Layers size={14} className="text-amber-400" />
-                  Leak Memory
-                </button>
-                {(config.replicas ?? 1) > 1 && (
-                  <button
-                    onClick={() => chaos.killReplica(config.id)}
-                    className="col-span-2 py-2 px-3 bg- hover:bg-slate-750 border border- rounded-lg text-xs text-slate-200 transition-colors flex items-center justify-center gap-1.5"
+              {/* LOAD BALANCER-specific */}
+              {config.type === 'LOAD_BALANCER' && (
+                <div>
+                  <Label>Algorithm</Label>
+                  <select
+                    value={config.algorithm ?? 'ROUND_ROBIN'}
+                    onChange={e => handleUpdate('algorithm', e.target.value)}
+                    style={{
+                      width: '100%', background: '#07090D', border: '1px solid #1A2030',
+                      borderRadius: 7, padding: '7px 10px', fontSize: 12, color: '#E8EDF3', outline: 'none',
+                    }}
                   >
-                    <Radio size={14} className="text-rose-400" />
-                    Kill 1 Replica
-                  </button>
-                )}
-              </>
-            )}
-
-            {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
-              <>
-                <button
-                  onClick={() => chaos.exhaustConnections(config.id)}
-                  className="py-2 px-3 bg- hover:bg-slate-750 border border- rounded-lg text-xs text-slate-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <Database size={14} className="text-cyan-400" />
-                  Exhaust Pool
-                </button>
-                <button
-                  onClick={() => chaos.triggerCacheExpiration(config.id)}
-                  className="py-2 px-3 bg- hover:bg-slate-750 border border- rounded-lg text-xs text-slate-200 transition-colors flex items-center justify-center gap-1.5"
-                >
-                  <RefreshCw size={14} className="text-orange-400" />
-                  Expire Cache
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Blast Radius Analysis Section */}
-        <div className="space-y-4 border-t border- pt-5">
-          <div className="flex justify-between items-center">
-            <h4 className="text-sm font-semibold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <ShieldAlert size={15} className="text-red-500 animate-pulse" />
-              Blast Radius Analysis
-            </h4>
-            <button
-              onClick={handleRunBlast}
-              disabled={blastLoading}
-              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 disabled:bg-indigo-850 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
-            >
-              <Play size={10} />
-              {blastLoading ? 'Analyzing...' : 'Analyze'}
-            </button>
-          </div>
-
-          {blastResult && (
-            <div className="bg- border border- rounded-lg p-3 space-y-3.5 text-xs text-slate-300 font-mono">
-              <div className="flex justify-between items-center pb-2 border-b border-">
-                <span>Affected Traffic:</span>
-                <span className="text-red-400 font-semibold">{blastResult.totalAffectedTrafficPercent}%</span>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wide font-sans font-bold">Risk Matrix:</p>
-                {blastResult.affectedNodes.map((n) => (
-                  <div key={n.nodeId} className="flex justify-between items-center">
-                    <span className="text-slate-200 text-xs">{n.nodeId}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-400">D:{n.depth}</span>
-                      <span
-                        className={`px-1.5 py-0.5 rounded-[3px] text-[10px] font-bold ${
-                          n.riskLevel === 'CRITICAL'
-                            ? 'bg- text-red-400 border border-'
-                            : n.riskLevel === 'HIGH'
-                            ? 'bg- text-orange-400 border border-'
-                            : n.riskLevel === 'MEDIUM'
-                            ? 'bg- text-amber-400 border border-'
-                            : 'bg- text-emerald-400 border border-'
-                        }`}
-                      >
-                        {n.riskLevel}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    <option value="ROUND_ROBIN">Round Robin</option>
+                    <option value="LEAST_CONNECTIONS">Least Connections</option>
+                    <option value="IP_HASH">IP Hash</option>
+                  </select>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Inject Chaos */}
+          <div>
+            <SectionHead icon={<AlertTriangle size={11} style={{ color: '#F59E0B' }} />} label="Inject Chaos" />
+
+            {!isSimRunning && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                background: '#F59E0B0A', border: '1px solid #F59E0B25',
+                borderRadius: 7, padding: '7px 10px', marginBottom: 10,
+                fontSize: 10, color: '#F59E0B', lineHeight: 1.5,
+              }}>
+                <Info size={11} style={{ flexShrink: 0 }} />
+                Start the simulation first — press ▶ in the top toolbar to enable chaos injection.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                <ChaosBtn onClick={() => chaos.killNode(config.id)} icon={<ShieldAlert size={12} />}
+                  label="Kill Node" color="#EF4444"
+                  disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                <ChaosBtn onClick={() => chaos.recoverNode(config.id)} icon={<RefreshCw size={12} />}
+                  label="Recover" color="#10B981"
+                  disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+              </div>
+
+              {config.type === 'SERVICE' && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                    <ChaosBtn onClick={() => chaos.spikeCpu(config.id)} icon={<Cpu size={12} />}
+                      label="Spike CPU" color="#6366F1"
+                      disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                    <ChaosBtn onClick={() => chaos.applyMemoryPressure(config.id)} icon={<Layers size={12} />}
+                      label="Leak Memory" color="#F59E0B"
+                      disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                  </div>
+                  {(config.replicas ?? 1) > 1 && (
+                    <ChaosBtn onClick={() => chaos.killReplica(config.id)} icon={<Radio size={12} />}
+                      label="Kill 1 Replica" color="#EC4899"
+                      disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                  )}
+                </>
+              )}
+
+              {(config.type === 'DATABASE' || config.type === 'ELASTICSEARCH' || config.type === 'REDIS') && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  <ChaosBtn onClick={() => chaos.exhaustConnections(config.id)} icon={<Database size={12} />}
+                    label="Exhaust Pool" color="#06B6D4"
+                    disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                  <ChaosBtn onClick={() => chaos.triggerCacheExpiration(config.id)} icon={<RefreshCw size={12} />}
+                    label="Expire Cache" color="#F97316"
+                    disabled={!isSimRunning} disabledTip={chaosDisabledTip} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Blast Radius Analysis */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <SectionHead icon={<ShieldAlert size={11} style={{ color: '#EF4444' }} />} label="Blast Radius" />
+              <button
+                onClick={handleRunBlast}
+                disabled={blastLoading}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px',
+                  background: blastLoading ? '#0D1018' : 'rgba(99,102,241,0.12)',
+                  border: `1px solid ${blastLoading ? '#1A2030' : 'rgba(99,102,241,0.35)'}`,
+                  borderRadius: 6, color: blastLoading ? '#3A4455' : '#8B9CF8',
+                  fontSize: 10, fontWeight: 700, cursor: blastLoading ? 'not-allowed' : 'pointer',
+                  fontFamily: "'JetBrains Mono', monospace", letterSpacing: 1,
+                  transition: 'all 0.15s',
+                }}
+              >
+                <Play size={9} />
+                {blastLoading ? 'ANALYZING...' : 'ANALYZE'}
+              </button>
+            </div>
+
+            <div style={{
+              fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#2A3140',
+              letterSpacing: 1, marginBottom: 10,
+            }}>
+              CLIENT-SIDE · NO API REQUIRED
+            </div>
+
+            {blastError && (
+              <div style={{
+                background: '#EF444410', border: '1px solid #EF444425',
+                borderRadius: 7, padding: '8px 10px', fontSize: 11, color: '#EF4444',
+                marginBottom: 10,
+              }}>
+                {blastError}
+              </div>
+            )}
+
+            {blastResult && (
+              <div style={{
+                background: '#07090D', border: '1px solid #141820',
+                borderRadius: 10, overflow: 'hidden',
+              }}>
+                {/* Summary row */}
+                <div style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  padding: '10px 12px', borderBottom: '1px solid #141820',
+                }}>
+                  <span style={{ fontSize: 10, fontFamily: "'JetBrains Mono', monospace", color: '#4A5568', letterSpacing: 1 }}>
+                    AFFECTED TRAFFIC
+                  </span>
+                  <span style={{
+                    fontSize: 18, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: 2,
+                    color: blastResult.totalAffectedTrafficPercent > 60 ? '#EF4444'
+                      : blastResult.totalAffectedTrafficPercent > 30 ? '#F59E0B' : '#10B981',
+                  }}>
+                    {blastResult.totalAffectedTrafficPercent}%
+                  </span>
+                </div>
+
+                {/* Affected nodes */}
+                <div style={{ padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <div style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#2A3140', letterSpacing: 1.5, marginBottom: 4 }}>
+                    RISK MATRIX
+                  </div>
+                  {blastResult.affectedNodes.map(n => (
+                    <div key={n.nodeId} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      padding: '4px 0',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+                        <ChevronRight size={10} style={{ color: '#2A3140', flexShrink: 0 }} />
+                        <span style={{ fontSize: 11, color: '#8B95A3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {n.nodeId}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <span style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#3A4455' }}>
+                          D:{n.depth}
+                        </span>
+                        <span style={{
+                          fontSize: 9, fontFamily: "'JetBrains Mono', monospace",
+                          padding: '2px 6px', borderRadius: 4,
+                          background: `${riskColors[n.riskLevel]}15`,
+                          color: riskColors[n.riskLevel],
+                          border: `1px solid ${riskColors[n.riskLevel]}30`,
+                          fontWeight: 700,
+                        }}>
+                          {n.riskLevel}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Critical paths */}
+                {blastResult.criticalPaths.length > 0 && (
+                  <div style={{ padding: '8px 12px', borderTop: '1px solid #0D1018' }}>
+                    <div style={{ fontSize: 9, fontFamily: "'JetBrains Mono', monospace", color: '#2A3140', letterSpacing: 1.5, marginBottom: 6 }}>
+                      CRITICAL PATH
+                    </div>
+                    {blastResult.criticalPaths.slice(0, 1).map((path, i) => (
+                      <div key={i} style={{
+                        fontSize: 9, fontFamily: "'JetBrains Mono', monospace",
+                        color: '#4A5568', lineHeight: 1.8,
+                        wordBreak: 'break-all',
+                      }}>
+                        {path.join(' → ')}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
-    </div>
+    </>
   )
 }

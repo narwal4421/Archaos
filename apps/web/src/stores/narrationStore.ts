@@ -1,18 +1,22 @@
 import { create } from 'zustand'
 import type { NarrationEntry } from '../types/narration'
 
+export type NarrationStatus = 'connecting' | 'connected' | 'disconnected' | 'failed'
+
 interface NarrationStore {
   entries: NarrationEntry[]
   isStreaming: boolean
   streamBuffer: string
   currentEntry: NarrationEntry | null
   modelUsed: string | null
+  connectionStatus: NarrationStatus
 
   startStreaming: () => void
   appendToken: (token: string) => void
   finishStreaming: (concept: string, prediction: string, watchFor: string) => void
   confirmPrediction: (entryId: string) => void
   setModelUsed: (model: string | null) => void
+  setConnectionStatus: (status: NarrationStatus) => void
   clear: () => void
 }
 
@@ -22,6 +26,7 @@ export const useNarrationStore = create<NarrationStore>((set, get) => ({
   streamBuffer: '',
   currentEntry: null,
   modelUsed: null,
+  connectionStatus: 'connecting',
 
   startStreaming: () => set({ isStreaming: true, streamBuffer: '', modelUsed: null }),
 
@@ -65,6 +70,8 @@ export const useNarrationStore = create<NarrationStore>((set, get) => ({
 
   setModelUsed: (model) => set({ modelUsed: model }),
 
+  setConnectionStatus: (status) => set({ connectionStatus: status }),
+
   clear: () =>
     set({
       entries: [],
@@ -72,5 +79,6 @@ export const useNarrationStore = create<NarrationStore>((set, get) => ({
       streamBuffer: '',
       currentEntry: null,
       modelUsed: null,
+      connectionStatus: 'connecting',
     }),
 }))

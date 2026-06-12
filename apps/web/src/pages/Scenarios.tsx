@@ -542,19 +542,39 @@ export function Scenarios() {
     async function loadScenarios() {
       try {
         const custom = await api.scenarios.list()
-        const mappedCustom = custom.map(c => ({
-          id: c.id,
-          name: c.name,
-          desc: c.description,
-          category: (c.category || 'RESILIENCE').toUpperCase() as DisplayScenario['category'],
-          difficulty: (c.difficulty || 'BEGINNER').toUpperCase() as DisplayScenario['difficulty'],
-          color: c.category === 'CASCADE' ? '#EF4444' : c.category === 'RETRY_STORM' ? '#F59E0B' : '#6366F1',
-          highlights: ['Community', 'Visual Sim'],
-          nodes: 5,
-          edges: 4,
-          pattern: 'fan',
-          upvotes: c.upvotes || 0,
-        }))
+        const mappedCustom = custom.map(c => {
+          const rawCat = (c.category || 'RESILIENCE').toUpperCase()
+          let category: DisplayScenario['category'] = 'RESILIENCE'
+          if (rawCat === 'CASCADE' || rawCat === 'GRACEFUL_DEGRADATION' || rawCat === 'RESILIENCE') {
+            category = 'RESILIENCE'
+          } else if (rawCat === 'RETRY_STORM' || rawCat === 'QUEUE_FLOOD' || rawCat === 'TRAFFIC_SPIKE' || rawCat === 'TRAFFIC') {
+            category = 'TRAFFIC'
+          } else if (rawCat === 'DATABASE' || rawCat === 'SPLIT_BRAIN' || rawCat === 'MEMORY_LEAK') {
+            category = 'DATABASE'
+          } else if (rawCat === 'CACHING' || rawCat === 'THUNDERING_HERD') {
+            category = 'CACHING'
+          }
+
+          let color = '#6366F1'
+          if (category === 'RESILIENCE') color = '#EF4444'
+          else if (category === 'TRAFFIC') color = '#F59E0B'
+          else if (category === 'DATABASE') color = '#06B6D4'
+          else if (category === 'CACHING') color = '#8B5CF6'
+
+          return {
+            id: c.id,
+            name: c.name,
+            desc: c.description,
+            category,
+            difficulty: (c.difficulty || 'BEGINNER').toUpperCase() as DisplayScenario['difficulty'],
+            color,
+            highlights: ['Community', 'Visual Sim'],
+            nodes: 5,
+            edges: 4,
+            pattern: 'fan',
+            upvotes: c.upvotes || 0,
+          }
+        })
         const defaults = SCENARIOS.filter(s => !mappedCustom.some(mc => mc.id === s.id))
         setScenarios([...defaults, ...mappedCustom])
       } catch (e) {

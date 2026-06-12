@@ -37,7 +37,7 @@ function getWikiLink(concept?: string): string {
 }
 
 export function NarrationPanel() {
-  const { isStreaming, streamBuffer, currentEntry, modelUsed } = useNarrationStore()
+  const { isStreaming, streamBuffer, currentEntry, modelUsed, connectionStatus } = useNarrationStore()
 
   const displayText = isStreaming
     ? (() => {
@@ -80,10 +80,30 @@ export function NarrationPanel() {
               {modelUsed.includes('kimi') ? 'Kimi K2.6 (fallback)' : 'GPT-OSS-120B'}
             </span>
           )}
-          <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/20">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
-            LIVE
-          </span>
+          {connectionStatus === 'connected' && (
+            <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#10B981] bg-[#10B981]/10 px-2 py-0.5 rounded border border-[#10B981]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#10B981] animate-pulse" />
+              LIVE
+            </span>
+          )}
+          {connectionStatus === 'connecting' && (
+            <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#F59E0B] bg-[#F59E0B]/10 px-2 py-0.5 rounded border border-[#F59E0B]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#F59E0B] animate-pulse" />
+              CONNECTING
+            </span>
+          )}
+          {connectionStatus === 'disconnected' && (
+            <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#EF4444] bg-[#EF4444]/10 px-2 py-0.5 rounded border border-[#EF4444]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444] animate-pulse" />
+              RECONNECTING
+            </span>
+          )}
+          {connectionStatus === 'failed' && (
+            <span className="flex items-center gap-1.5 text-[9px] font-semibold text-[#EF4444] bg-[#EF4444]/10 px-2 py-0.5 rounded border border-[#EF4444]/20">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#EF4444]" />
+              OFFLINE
+            </span>
+          )}
         </div>
       </div>
 

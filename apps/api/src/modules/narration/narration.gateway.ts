@@ -246,8 +246,6 @@ Never be generic. Every word should describe THIS specific topology's current st
 
     let modelUsed: string = DYNAMIC_MODELS.primary;
     let stream: Stream<ChatCompletionChunk>;
-    let fallbackStream: Stream<ChatCompletionChunk> | null = null;
-    let firstTokenReceived = false;
     const fullResponse: string[] = [];
 
     try {
@@ -264,46 +262,78 @@ Never be generic. Every word should describe THIS specific topology's current st
 
     client.emit('narration:model', { model: modelUsed });
 
-    const firstTokenTimer = setTimeout(() => {
-      if (!firstTokenReceived && modelUsed === DYNAMIC_MODELS.primary) {
-        this.logger.warn(
-          `Primary model too slow (>${FIRST_TOKEN_TIMEOUT_MS}ms) — switching to fallback`,
-        );
-        void attemptStream(DYNAMIC_MODELS.fallback)
-          .then((fb) => {
-            fallbackStream = fb;
-            modelUsed = DYNAMIC_MODELS.fallback;
-            client.emit('narration:model', { model: modelUsed });
-          })
-          .catch((fallbackErr: unknown) => {
-            this.logger.error(
-              'Fallback model also failed',
-              String(fallbackErr),
-            );
-            client.emit('narration:error', {
-              message: 'Both models unavailable. Try again in a moment.',
-            });
-          });
-      }
-    }, FIRST_TOKEN_TIMEOUT_MS);
-
-    const activeStream = fallbackStream ?? stream;
+    let iterator = stream[Symbol.asyncIterator]();
+    let firstPart: IteratorResult<ChatCompletionChunk>;
 
     try {
-      for await (const part of activeStream) {
-        const token = part.choices[0]?.delta?.content ?? '';
-        if (!token) continue;
-        if (!firstTokenReceived) {
-          firstTokenReceived = true;
-          clearTimeout(firstTokenTimer);
+      if (modelUsed === DYNAMIC_MODELS.primary) {
+        const nextPromise = iterator.next();
+        let timeoutId: NodeJS.Timeout;
+        const timeoutPromise = new Promise<null>((resolve) => {
+          timeoutId = setTimeout(() => resolve(null), FIRST_TOKEN_TIMEOUT_MS);
+        });
+        const result = await Promise.race([nextPromise, timeoutPromise]);
+        clearTimeout(timeoutId!);
+
+        if (result === null) {
+          this.logger.warn(
+            `Primary model too slow (>${FIRST_TOKEN_TIMEOUT_MS}ms) — switching to fallback`,
+          );
+          modelUsed = DYNAMIC_MODELS.fallback;
+          client.emit('narration:model', { model: modelUsed });
+          const fallback = await attemptStream(DYNAMIC_MODELS.fallback);
+          iterator = fallback[Symbol.asyncIterator]();
+          firstPart = await iterator.next();
+        } else {
+          firstPart = result;
         }
-        fullResponse.push(token);
-        client.emit('narration:token', { token });
+      } else {
+        firstPart = await iterator.next();
       }
-    } catch {
-      if (modelUsed === DYNAMIC_MODELS.primary && !fallbackStream) {
+    } catch (err) {
+      this.logger.warn(
+        `Stream start error: ${String(err)} — switching to fallback`,
+      );
+      if (modelUsed === DYNAMIC_MODELS.primary) {
+        try {
+          modelUsed = DYNAMIC_MODELS.fallback;
+          client.emit('narration:model', { model: modelUsed });
+          const fallback = await attemptStream(DYNAMIC_MODELS.fallback);
+          iterator = fallback[Symbol.asyncIterator]();
+          firstPart = await iterator.next();
+        } catch (fbErr) {
+          this.logger.error(
+            'Fallback model also failed to start',
+            String(fbErr),
+          );
+          client.emit('narration:error', {
+            message: 'Narration models unavailable. Try again in a moment.',
+          });
+          return;
+        }
+      } else {
+        client.emit('narration:error', {
+          message: 'Narration model failed to start.',
+        });
+        return;
+      }
+    }
+
+    try {
+      let currentResult = firstPart;
+      while (!currentResult.done) {
+        const part = currentResult.value;
+        const token = part.choices[0]?.delta?.content ?? '';
+        if (token) {
+          fullResponse.push(token);
+          client.emit('narration:token', { token });
+        }
+        currentResult = await iterator.next();
+      }
+    } catch (streamReadErr) {
+      this.logger.warn('Stream interrupted mid-way:', String(streamReadErr));
+      if (modelUsed === DYNAMIC_MODELS.primary) {
         this.logger.warn('Primary stream died mid-way — switching to fallback');
-        clearTimeout(firstTokenTimer);
         try {
           const recovery = await attemptStream(DYNAMIC_MODELS.fallback);
           modelUsed = DYNAMIC_MODELS.fallback;
@@ -323,8 +353,6 @@ Never be generic. Every word should describe THIS specific topology's current st
         }
       }
     }
-
-    clearTimeout(firstTokenTimer);
 
     try {
       const fullText = fullResponse.join('');
